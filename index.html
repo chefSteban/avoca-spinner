@@ -179,6 +179,8 @@
 
         .wheel-number {
             position: absolute;
+            inset:0;
+            transform-origin:50% 50%;
             width: 50%;
             height: 50%;
             transform-origin: right bottom;
@@ -224,20 +226,17 @@
             to { box-shadow: 0 0 50px rgba(0, 212, 255, 1), 0 2px 10px rgba(0,0,0,0.5); }
         }
 
-        .participant-name {
-            position: absolute;
-            font-size: 10px;
-            color: rgba(244, 248, 255, 0.7);
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-            transform: rotate(var(--rotate)) translateX(120px) rotate(calc(-1 * var(--rotate)));
-            white-space: nowrap;
-            max-width: 80px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-
+.participant-name{
+  position:absolute;
+  width:140px;                 /* give room for centering */
+  margin-left:-70px;           /* center the 140px box on the anchor */
+  left:50%;
+  text-align:center;
+  transform: rotate(var(--rotate)) translateX(140px) rotate(calc(-1 * var(--rotate)));
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
         .participant-name.highlighted {
             font-size: 14px;
             font-weight: 600;
@@ -712,7 +711,7 @@
             BASE_ID: 'appQm84VJgrmPJZal',
             PARTICIPANTS_TABLE: 'Participants',
             ADMIN_TABLE: 'Admin Controls',
-            POLLING_INTERVAL: 2000 // 2 seconds
+            POLLING_INTERVAL: 500 // .5sec
         };
 
         // ============================================================================
@@ -908,36 +907,32 @@
             }
         }
 
-        async function checkSpinTrigger() {
-            try {
-                // Simplify this query too
-                const records = await fetchFromAirtable(AIRTABLE_CONFIG.ADMIN_TABLE, {
-                    filterByFormula: "{Trigger Spin} = TRUE()",
-                    maxRecords: 1
-                });
+let lastSpinIdSeen = null;
 
-                if (records.length > 0) {
-                    const spinRecord = records[0];
-                    const spinId = spinRecord.fields['Spin ID'] || spinRecord.id;
-                    
-                    // Check if this is a new spin trigger
-                    if (spinId !== appState.currentSpinId && !appState.isSpinning) {
-                        appState.currentSpinId = spinId;
-                        
-                        // Reset the trigger
-                        await updateAirtableRecord(AIRTABLE_CONFIG.ADMIN_TABLE, spinRecord.id, {
-                            'Trigger Spin': false
-                        });
-                        
-                        return true;
-                    }
-                }
-                return false;
-            } catch (error) {
-                console.error('Error checking spin trigger:', error);
-                return false;
-            }
-        }
+async function checkSpinTrigger(){
+  try{
+    const records = await fetchFromAirtable(AIRTABLE_CONFIG.ADMIN_TABLE, {
+      filterByFormula: "{Trigger Spin} = TRUE()",
+      maxRecords: 1
+    });
+    if (!records.length) return false;
+
+    const rec = records[0];
+    const spinId = rec.fields['Spin ID'] || rec.id;
+
+    if (spinId === lastSpinIdSeen || appState.isSpinning) return false;
+
+    lastSpinIdSeen = spinId;
+
+    // immediately reset the trigger so other clients don’t re-trigger
+    await updateAirtableRecord(AIRTABLE_CONFIG.ADMIN_TABLE, rec.id, { 'Trigger Spin': false });
+
+    return true;
+  }catch(e){
+    console.error('checkSpinTrigger error', e);
+    return false;
+  }
+}
 
         async function markWinner(participant, position) {
             try {
@@ -955,76 +950,62 @@
         // UI UPDATE FUNCTIONS
         // ============================================================================
         
-        function createWheel() {
-            const wheel = $('#wheel');
-            wheel.empty();
-            
-            if (appState.participants.length === 0) {
-                wheel.css('background', 'conic-gradient(from 0deg, #1c2128, #2a3038)');
-                return;
-            }
+        function createWheel(){
+  const wheel = $('#wheel');
+  wheel.empty();
 
-            const segmentAngle = 360 / appState.participants.length;
-            let gradientStops = [];
-            
-            appState.participants.forEach((participant, index) => {
-                const startAngle = index * segmentAngle;
-                const endAngle = (index + 1) * segmentAngle;
-                const color = wheelColors[index % wheelColors.length];
-                
-                gradientStops.push(`${color} ${startAngle}deg ${endAngle}deg`);
-                
-                // Create number display
-                const numberDiv = $('<div class="wheel-number"></div>');
-                const isHighlighted = participant.name === appState.highlightedUser || 
-                                     participant.email === userEmail;
-                
-                numberDiv.html(`
-                    <div class="number-display ${isHighlighted ? 'highlighted' : ''}" 
-                         style="--rotate: ${startAngle + segmentAngle/2}deg">
-                        ${index + 1}
-                    </div>
-                    <div class="participant-name ${isHighlighted ? 'highlighted' : ''}" 
-                         style="--rotate: ${startAngle + segmentAngle/2}deg">
-                        ${participant.name}
-                    </div>
-                `);
-                wheel.append(numberDiv);
-            });
-            
-            wheel.css('background', `conic-gradient(from 0deg, ${gradientStops.join(', ')})`);
-        }
+  if (!appState.participants.length){
+    wheel.css('background','conic-gradient(from 0deg, #1c2128, #2a3038)');
+    return;
+  }
 
-        function updateParticipantsDisplay() {
-            const grid = $('#participantsGrid');
-            const count = $('#participantCount');
-            
-            if (appState.participants.length === 0) {
-                grid.html(`
-                    <div style="grid-column: 1 / -1; text-align: center; color: #8a9199; padding: 40px 20px;">
-                        Waiting for players to join...
-                    </div>
-                `);
-                count.text('0');
-                return;
-            }
-            
-            let html = '';
-            appState.participants.forEach((p, index) => {
-                const isHighlighted = p.name === appState.highlightedUser || 
-                                     p.email === userEmail;
-                                     
-                html += `
-                    <div class="participant-slot ${isHighlighted ? 'highlighted' : ''}">
-                        <div class="slot-number">${index + 1}</div>
-                        <div class="slot-name">${p.name}</div>
-                    </div>
-                `;
-            });
-            
-            grid.html(html);
-            count.text(appState.participants.length);
-        }
+  const segmentAngle = 360 / appState.participants.length;
+  let stops = [];
+
+  appState.participants.forEach((p, i) => {
+    const start = i*segmentAngle;
+    const mid = start + segmentAngle/2;
+    const color = wheelColors[i % wheelColors.length];
+    stops.push(`${color} ${start}deg ${(i+1)*segmentAngle}deg`);
+
+    const isHighlighted = (userName && p.name===userName) || (userEmail && p.email===userEmail);
+
+    const displayName = isHighlighted ? p.name : ''; // <<< hide others
+    const numberDiv = $('<div class="wheel-number"></div>');
+    numberDiv.html(`
+      <div class="number-display ${isHighlighted?'highlighted':''}" style="--rotate:${mid}deg">${i+1}</div>
+      <div class="participant-name ${isHighlighted?'highlighted':''}" style="--rotate:${mid}deg">${displayName}</div>
+    `);
+    wheel.append(numberDiv);
+  });
+
+  wheel.css('background',`conic-gradient(from 0deg, ${stops.join(', ')})`);
+}
+
+function updateParticipantsDisplay(){
+  const grid = $('#participantsGrid');
+  const count = $('#participantCount');
+  const has = appState.participants.length;
+
+  if (!has){
+    grid.html(`<div style="grid-column:1/-1;text-align:center;color:#8a9199;padding:40px 20px;">Waiting for players to join...</div>`);
+    count.text('0');
+    return;
+  }
+
+  let html = '';
+  appState.participants.forEach((p,i)=>{
+    const isHighlighted = (userName && p.name===userName) || (userEmail && p.email===userEmail);
+    html += `
+      <div class="participant-slot ${isHighlighted?'highlighted':''}">
+        <div class="slot-number">${i+1}</div>
+        <div class="slot-name">${isHighlighted ? p.name : ''}</div>
+      </div>`;
+  });
+
+  grid.html(html);
+  count.text(has);
+}
 
         function updateQueueDisplay() {
             const queueSection = $('#queueSection');
@@ -1099,58 +1080,69 @@
         // WHEEL SPINNING LOGIC - ADMIN ONLY (No manual spin capability)
         // ============================================================================
         
-        function spinWheel() {
-            if (appState.isSpinning || appState.participants.length === 0) {
-                return;
-            }
-            
-            console.log('Starting admin-triggered wheel spin...');
-            appState.isSpinning = true;
-            
-            const wheel = $('#wheel');
-            const center = $('#wheelCenter');
-            const indicator = $('#spinningIndicator');
-            
-            // Show spinning indicator (center becomes disabled)
-            center.text('SPINNING');
-            indicator.addClass('show');
-            
-            // Calculate winning position
-            const winnerIndex = Math.floor(Math.random() * appState.participants.length);
-            const winner = appState.participants[winnerIndex];
-            console.log(`Selected winner: ${winner.name} at position ${winnerIndex + 1}`);
-            
-            // Calculate spin rotation
-            const segmentAngle = 360 / appState.participants.length;
-            const targetAngle = (winnerIndex * segmentAngle) + (segmentAngle / 2);
-            const spins = 8; // Number of full rotations
-            const finalRotation = (spins * 360) + (360 - targetAngle); // Point to winner
-            
-            // Apply spinning class and rotation
-            wheel.addClass('spinning');
-            wheel.css('transform', `rotate(${finalRotation}deg)`);
-            
-            // Handle spin completion
-            setTimeout(async () => {
-                console.log(`Spin complete! Winner: ${winner.name}`);
-                
-                // Reset UI
-                appState.isSpinning = false;
-                center.text('SPIN');
-                indicator.removeClass('show');
-                wheel.removeClass('spinning');
-                
-                // Mark winner in database
-                await markWinner(winner, winnerIndex + 1);
-                
-                // Show winner announcement
-                showWinnerAnnouncement(winner, winnerIndex + 1);
-                
-                // Refresh data after short delay
-                setTimeout(refreshData, 2000);
-                
-            }, 4000); // Match CSS transition duration
-        }
+        function chooseWeightedIndex(list){
+  // sum weights
+  const total = list.reduce((s,p)=> s + (Number(p.weight)||1), 0);
+  let r = Math.random() * total;
+  for (let i=0;i<list.length;i++){
+    r -= (Number(list[i].weight)||1);
+    if (r <= 0) return i;
+  }
+  return list.length - 1; // fallback
+}
+
+let spinLockUntil = 0;        // prevents rapid/double spins
+let rotationResetDone = true; // tracks reset state between spins
+
+async function spinWheel(){
+  const now = Date.now();
+  if (appState.isSpinning || now < spinLockUntil || appState.participants.length===0) return;
+
+  appState.isSpinning = true;
+  spinLockUntil = now + 6000; // lock for > transition duration
+
+  const wheel = $('#wheel');
+  const indicator = $('#spinningIndicator');
+
+  // Hard reset transform so every spin starts from 0deg
+  rotationResetDone = false;
+  wheel.css('transition','none');
+  wheel.css('transform','rotate(0deg)');
+  // force reflow so the browser applies the reset immediately
+  void wheel[0].offsetWidth;
+  rotationResetDone = true;
+
+  // UI state
+  indicator.addClass('show');
+  $('.wheel-center').text('SPINNING');
+
+  // --- weighted winner ---
+  const winnerIndex = chooseWeightedIndex(appState.participants);
+  const winner = appState.participants[winnerIndex];
+
+  // --- compute rotation to land winner under the pointer at top (0deg) ---
+  const segmentAngle = 360 / appState.participants.length;
+  const targetAngle = winnerIndex * segmentAngle + segmentAngle/2; // center of segment
+  const spins = 8; // full rotations
+  const finalRotation = (spins*360) + (360 - targetAngle); // align winner at pointer
+
+  // run spin
+  wheel.addClass('spinning');
+  wheel.css('transition','transform 4s cubic-bezier(0.25,0.46,0.45,0.94)');
+  wheel.css('transform', `rotate(${finalRotation}deg)`);
+
+  setTimeout(async ()=>{
+    indicator.removeClass('show');
+    $('.wheel-center').text('SPIN');
+    wheel.removeClass('spinning');
+    appState.isSpinning = false;
+
+    await markWinner(winner, winnerIndex+1);
+    showWinnerAnnouncement(winner, winnerIndex+1);
+
+    setTimeout(refreshData, 1200);
+  }, 4000);
+}
 
         // ============================================================================
         // DATA REFRESH & POLLING
@@ -1193,25 +1185,19 @@
             }
         }
 
-        async function pollForUpdates() {
-            try {
-                // Check for admin spin trigger (no manual spins allowed)
-                if (!appState.isSpinning) {
-                    const shouldSpin = await checkSpinTrigger();
-                    if (shouldSpin) {
-                        console.log('Spin triggered by admin controls');
-                        spinWheel();
-                        return; // Skip data refresh during spin
-                    }
-                }
-                
-                // Refresh participant data
-                await refreshData();
-                
-            } catch (error) {
-                console.error('Error in polling loop:', error);
-            }
-        }
+let pollBusy = false;
+async function pollForUpdates(){
+  if (pollBusy) return;
+  pollBusy = true;
+  try{
+    if (!appState.isSpinning){
+      const shouldSpin = await checkSpinTrigger();
+      if (shouldSpin){ spinWheel(); pollBusy = false; return; }
+    }
+    await refreshData();
+  }catch(e){ console.error(e); }
+  finally{ pollBusy = false; }
+}
 
         // ============================================================================
         // EVENT HANDLERS & INITIALIZATION
