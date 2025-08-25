@@ -818,8 +818,28 @@
         
         async function fetchFromAirtable(tableName, params = {}) {
             try {
-                const queryString = new URLSearchParams(params).toString();
-                const url = `https://api.airtable.com/v0/${AIRTABLE_CONFIG.BASE_ID}/${tableName}${queryString ? '?' + queryString : ''}`;
+                // Build URL with proper encoding for Airtable API
+                let url = `https://api.airtable.com/v0/${AIRTABLE_CONFIG.BASE_ID}/${tableName}`;
+                const searchParams = new URLSearchParams();
+                
+                // Handle each parameter properly
+                Object.entries(params).forEach(([key, value]) => {
+                    if (key === 'sort' && Array.isArray(value)) {
+                        // Sort parameter needs special handling
+                        value.forEach(sortObj => {
+                            searchParams.append('sort[0][field]', sortObj.field);
+                            searchParams.append('sort[0][direction]', sortObj.direction);
+                        });
+                    } else if (typeof value === 'string' || typeof value === 'number') {
+                        searchParams.append(key, value);
+                    }
+                });
+                
+                if (searchParams.toString()) {
+                    url += '?' + searchParams.toString();
+                }
+                
+                console.log('Fetching from URL:', url);
                 
                 const response = await fetch(url, {
                     method: 'GET',
@@ -830,6 +850,8 @@
                 });
 
                 if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Airtable API Error:', errorText);
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
@@ -871,9 +893,10 @@
         
         async function fetchParticipants() {
             try {
+                // Simplify the query to avoid encoding issues
                 const records = await fetchFromAirtable(AIRTABLE_CONFIG.PARTICIPANTS_TABLE, {
-                    filterByFormula: 'OR({Status} = "Active", {Status} = "")',
-                    sort: [{ field: 'Created Time', direction: 'asc' }]
+                    filterByFormula: "OR({Status} = 'Active', {Status} = '')",
+                    maxRecords: 100
                 });
 
                 const participants = records.map(record => ({
@@ -884,8 +907,13 @@
                     status: record.fields.Status || 'Active'
                 }));
 
-                // Sort by weight (higher weight = better position)
-                participants.sort((a, b) => b.weight - a.weight);
+                // Sort by weight (higher weight = better position), then by name
+                participants.sort((a, b) => {
+                    if (b.weight !== a.weight) {
+                        return b.weight - a.weight;
+                    }
+                    return a.name.localeCompare(b.name);
+                });
 
                 return participants;
             } catch (error) {
@@ -896,9 +924,9 @@
 
         async function checkSpinTrigger() {
             try {
+                // Simplify this query too
                 const records = await fetchFromAirtable(AIRTABLE_CONFIG.ADMIN_TABLE, {
-                    filterByFormula: '{Trigger Spin} = TRUE()',
-                    sort: [{ field: 'Created Time', direction: 'desc' }],
+                    filterByFormula: "{Trigger Spin} = TRUE()",
                     maxRecords: 1
                 });
 
