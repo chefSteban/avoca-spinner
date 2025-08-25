@@ -268,22 +268,8 @@
             font-size: 16px;
             color: #f4f8ff;
             letter-spacing: 2px;
-            cursor: pointer;
-            transition: all 0.3s ease;
             text-transform: uppercase;
             user-select: none;
-        }
-
-        .wheel-center:hover:not(.disabled) {
-            transform: translate(-50%, -50%) scale(1.1);
-            box-shadow: 
-                0 0 60px rgba(0, 122, 255, 0.8),
-                inset 0 -3px 10px rgba(0,0,0,0.3);
-        }
-
-        .wheel-center.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
         }
 
         .pointer {
@@ -685,7 +671,7 @@
                 <div class="wheel-container">
                     <div class="pointer"></div>
                     <div class="wheel" id="wheel"></div>
-                    <div class="wheel-center" id="wheelCenter">SPIN</div>
+                    <div class="wheel-center">SPIN</div>
                     <div class="spinning-indicator" id="spinningIndicator">Spinning...</div>
                 </div>
             </div>
@@ -747,7 +733,7 @@
         const userEmail = urlParams.get('email');
         const userName = urlParams.get('name');
 
-        // Wheel colors (casino-style blue variations)
+        // Wheel segment colors (alternating dark blue and lighter variations)
         const wheelColors = [
             '#007aff', '#0056b3', '#003d80', '#004c99', 
             '#0066cc', '#0052a3', '#003366', '#004080',
@@ -1110,7 +1096,7 @@
         }
 
         // ============================================================================
-        // WHEEL SPINNING LOGIC
+        // WHEEL SPINNING LOGIC - ADMIN ONLY (No manual spin capability)
         // ============================================================================
         
         function spinWheel() {
@@ -1118,15 +1104,15 @@
                 return;
             }
             
-            console.log('Starting wheel spin...');
+            console.log('Starting admin-triggered wheel spin...');
             appState.isSpinning = true;
             
             const wheel = $('#wheel');
             const center = $('#wheelCenter');
             const indicator = $('#spinningIndicator');
             
-            // Disable wheel center button
-            center.addClass('disabled').text('SPINNING');
+            // Show spinning indicator (center becomes disabled)
+            center.text('SPINNING');
             indicator.addClass('show');
             
             // Calculate winning position
@@ -1150,7 +1136,7 @@
                 
                 // Reset UI
                 appState.isSpinning = false;
-                center.removeClass('disabled').text('SPIN');
+                center.text('SPIN');
                 indicator.removeClass('show');
                 wheel.removeClass('spinning');
                 
@@ -1209,11 +1195,11 @@
 
         async function pollForUpdates() {
             try {
-                // Check for spin trigger
+                // Check for admin spin trigger (no manual spins allowed)
                 if (!appState.isSpinning) {
                     const shouldSpin = await checkSpinTrigger();
                     if (shouldSpin) {
-                        console.log('Spin triggered by admin');
+                        console.log('Spin triggered by admin controls');
                         spinWheel();
                         return; // Skip data refresh during spin
                     }
@@ -1235,14 +1221,10 @@
             console.log('Avoca Royale initializing...');
             console.log('User email:', userEmail);
             console.log('User name:', userName);
+            console.log('Note: Manual spinning disabled - spins are admin-controlled only');
             
-            // Manual spin click handler (for testing)
-            $('#wheelCenter').on('click', function() {
-                if (!$(this).hasClass('disabled')) {
-                    console.log('Manual spin triggered');
-                    spinWheel();
-                }
-            });
+            // No manual spin capability - wheel center is display only
+            $('#wheelCenter').css('cursor', 'default');
             
             // Close winner announcement on click
             $('#winnerAnnouncement').on('click', function() {
@@ -1265,7 +1247,7 @@
         // Expose functions to global scope for debugging
         window.avocaDebug = {
             refreshData,
-            spinWheel,
+            spinWheel, // For testing only - normally only triggered by admin
             showError,
             appState,
             AIRTABLE_CONFIG
