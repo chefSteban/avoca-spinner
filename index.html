@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Avoca Royale</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -105,6 +106,11 @@
             box-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
         }
 
+        .status-dot.disconnected {
+            background: #ef4444;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+
         @keyframes pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.6; transform: scale(1.2); }
@@ -164,6 +170,11 @@
                 inset 0 0 30px rgba(0, 0, 0, 0.5);
             transition: transform 4s cubic-bezier(0.25, 0.1, 0.25, 1);
             border: 2px solid rgba(244, 248, 255, 0.1);
+            background: conic-gradient(from 0deg, #1c2128, #2a3038);
+        }
+
+        .wheel.spinning {
+            transition: transform 4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
         .wheel-number {
@@ -260,13 +271,19 @@
             cursor: pointer;
             transition: all 0.3s ease;
             text-transform: uppercase;
+            user-select: none;
         }
 
-        .wheel-center:hover {
+        .wheel-center:hover:not(.disabled) {
             transform: translate(-50%, -50%) scale(1.1);
             box-shadow: 
                 0 0 60px rgba(0, 122, 255, 0.8),
                 inset 0 -3px 10px rgba(0,0,0,0.3);
+        }
+
+        .wheel-center.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .pointer {
@@ -490,8 +507,8 @@
             position: fixed;
             width: 10px;
             height: 10px;
-            position: absolute;
             animation: confetti-fall 3s linear;
+            pointer-events: none;
         }
 
         @keyframes confetti-fall {
@@ -519,7 +536,12 @@
             letter-spacing: 2px;
             text-transform: uppercase;
             box-shadow: 0 5px 30px rgba(0, 122, 255, 0.5);
-            animation: pulse 1s infinite;
+            animation: pulse-spin 1s infinite;
+        }
+
+        @keyframes pulse-spin {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.05); }
         }
 
         .spinning-indicator.show {
@@ -565,6 +587,31 @@
             text-shadow: 0 0 10px rgba(244, 248, 255, 0.5);
         }
 
+        .error-message {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f4f8ff;
+            font-size: 14px;
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+            z-index: 1000;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
         /* Scrollbar styling */
         ::-webkit-scrollbar {
             width: 10px;
@@ -583,8 +630,35 @@
         ::-webkit-scrollbar-thumb:hover {
             background: linear-gradient(135deg, #00d4ff 0%, #007aff 100%);
         }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                gap: 30px;
+            }
+            
+            .wheel-container {
+                width: 350px;
+                height: 350px;
+            }
+            
+            .info-panels {
+                min-width: auto;
+                width: 100%;
+                max-width: 400px;
+            }
+            
+            .header h1 {
+                font-size: 2.5em;
+                letter-spacing: 4px;
+            }
+            
+            .participants-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
     </style>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
     <div class="casino-lights"></div>
@@ -593,7 +667,7 @@
         <h1>Avoca Royale</h1>
         <div class="subtitle">Where Fortune Meets Destiny</div>
         <div class="status-indicator">
-            <div class="status-dot"></div>
+            <div class="status-dot" id="statusDot"></div>
             <span id="connectionStatus">Connecting...</span>
         </div>
     </div>
@@ -611,7 +685,7 @@
                 <div class="wheel-container">
                     <div class="pointer"></div>
                     <div class="wheel" id="wheel"></div>
-                    <div class="wheel-center">SPIN</div>
+                    <div class="wheel-center" id="wheelCenter">SPIN</div>
                     <div class="spinning-indicator" id="spinningIndicator">Spinning...</div>
                 </div>
             </div>
@@ -620,7 +694,11 @@
         <div class="info-panels">
             <div class="panel">
                 <h2>Players (<span id="participantCount">0</span>/36)</h2>
-                <div class="participants-grid" id="participantsGrid"></div>
+                <div class="participants-grid" id="participantsGrid">
+                    <div style="grid-column: 1 / -1; text-align: center; color: #8a9199; padding: 40px 20px;">
+                        Waiting for players to join...
+                    </div>
+                </div>
                 
                 <div class="queue-section" id="queueSection" style="display: none;">
                     <h3 style="color: #f4f8ff; margin-bottom: 15px; font-weight: 300; letter-spacing: 1px;">WAITING LIST (<span id="queueCount">0</span>)</h3>
@@ -637,26 +715,39 @@
         <div style="font-size: 1.1em; color: #8a9199; margin-top: 20px; letter-spacing: 2px;">CONGRATULATIONS</div>
     </div>
 
+    <div class="error-message" id="errorMessage"></div>
+
     <script>
-        // Configuration
-        const AIRTABLE_API_KEY = 'patjFd8AqLFaguOEe.0926a467696986c2920b20907d6f7b8bc468592117c50e02d4303fbc29eb0ac1';
-        const AIRTABLE_BASE_ID = 'appQm84VJgrmPJZal';
-        const AIRTABLE_TABLE_NAME = 'Participants';
-        const POLLING_INTERVAL = 2000;
+        // ============================================================================
+        // CONFIGURATION - Update these values as needed
+        // ============================================================================
+        const AIRTABLE_CONFIG = {
+            API_KEY: 'patjFd8AqLFaguOEe.0926a467696986c2920b20907d6f7b8bc468592117c50e02d4303fbc29eb0ac1',
+            BASE_ID: 'appQm84VJgrmPJZal',
+            PARTICIPANTS_TABLE: 'Participants',
+            ADMIN_TABLE: 'Admin Controls',
+            POLLING_INTERVAL: 2000 // 2 seconds
+        };
 
-        // State management
-        let participants = [];
-        let queue = [];
-        let isSpinning = false;
-        let highlightedUser = null;
-        let lastSpinCheck = null;
+        // ============================================================================
+        // GLOBAL STATE
+        // ============================================================================
+        let appState = {
+            participants: [],
+            queue: [],
+            isSpinning: false,
+            highlightedUser: null,
+            lastSpinCheck: null,
+            currentSpinId: null,
+            connectionStatus: 'connecting'
+        };
 
-        // Get URL parameters using jQuery
+        // URL Parameters
         const urlParams = new URLSearchParams(window.location.search);
         const userEmail = urlParams.get('email');
         const userName = urlParams.get('name');
 
-        // Wheel segment colors (alternating dark blue and lighter variations)
+        // Wheel colors (casino-style blue variations)
         const wheelColors = [
             '#007aff', '#0056b3', '#003d80', '#004c99', 
             '#0066cc', '#0052a3', '#003366', '#004080',
@@ -669,20 +760,200 @@
             '#0059b3', '#003f7f', '#004d99', '#0066cc'
         ];
 
-        // Initialize wheel
+        // ============================================================================
+        // UTILITY FUNCTIONS
+        // ============================================================================
+        
+        function showError(message) {
+            console.error('Error:', message);
+            const errorEl = $('#errorMessage');
+            errorEl.text(message).addClass('show');
+            setTimeout(() => {
+                errorEl.removeClass('show');
+            }, 5000);
+        }
+
+        function updateConnectionStatus(status) {
+            appState.connectionStatus = status;
+            const statusEl = $('#connectionStatus');
+            const dotEl = $('#statusDot');
+            
+            switch(status) {
+                case 'connected':
+                    statusEl.text('Connected');
+                    dotEl.removeClass('disconnected');
+                    break;
+                case 'error':
+                    statusEl.text('Connection Error');
+                    dotEl.addClass('disconnected');
+                    break;
+                default:
+                    statusEl.text('Connecting...');
+                    dotEl.removeClass('disconnected');
+            }
+        }
+
+        function createConfetti() {
+            const colors = ['#007aff', '#00d4ff', '#f4f8ff', '#0056b3'];
+            
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const confetti = $('<div class="confetti"></div>');
+                    confetti.css({
+                        left: Math.random() * 100 + 'vw',
+                        backgroundColor: colors[Math.floor(Math.random() * colors.length)],
+                        borderRadius: Math.random() > 0.5 ? '50%' : '0',
+                        animationDelay: Math.random() * 3 + 's'
+                    });
+                    $('body').append(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 50);
+            }
+        }
+
+        // ============================================================================
+        // AIRTABLE API FUNCTIONS
+        // ============================================================================
+        
+        async function fetchFromAirtable(tableName, params = {}) {
+            try {
+                const queryString = new URLSearchParams(params).toString();
+                const url = `https://api.airtable.com/v0/${AIRTABLE_CONFIG.BASE_ID}/${tableName}${queryString ? '?' + queryString : ''}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${AIRTABLE_CONFIG.API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data.records || [];
+            } catch (error) {
+                console.error(`Error fetching from ${tableName}:`, error);
+                throw error;
+            }
+        }
+
+        async function updateAirtableRecord(tableName, recordId, fields) {
+            try {
+                const url = `https://api.airtable.com/v0/${AIRTABLE_CONFIG.BASE_ID}/${tableName}/${recordId}`;
+                
+                const response = await fetch(url, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${AIRTABLE_CONFIG.API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ fields })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error(`Error updating record in ${tableName}:`, error);
+                throw error;
+            }
+        }
+
+        // ============================================================================
+        // DATA PROCESSING FUNCTIONS
+        // ============================================================================
+        
+        async function fetchParticipants() {
+            try {
+                const records = await fetchFromAirtable(AIRTABLE_CONFIG.PARTICIPANTS_TABLE, {
+                    filterByFormula: 'OR({Status} = "Active", {Status} = "")',
+                    sort: [{ field: 'Created Time', direction: 'asc' }]
+                });
+
+                const participants = records.map(record => ({
+                    id: record.id,
+                    name: record.fields.Name || 'Anonymous',
+                    email: record.fields.Email || '',
+                    weight: record.fields.Weight || 1,
+                    status: record.fields.Status || 'Active'
+                }));
+
+                // Sort by weight (higher weight = better position)
+                participants.sort((a, b) => b.weight - a.weight);
+
+                return participants;
+            } catch (error) {
+                console.error('Error fetching participants:', error);
+                return [];
+            }
+        }
+
+        async function checkSpinTrigger() {
+            try {
+                const records = await fetchFromAirtable(AIRTABLE_CONFIG.ADMIN_TABLE, {
+                    filterByFormula: '{Trigger Spin} = TRUE()',
+                    sort: [{ field: 'Created Time', direction: 'desc' }],
+                    maxRecords: 1
+                });
+
+                if (records.length > 0) {
+                    const spinRecord = records[0];
+                    const spinId = spinRecord.fields['Spin ID'] || spinRecord.id;
+                    
+                    // Check if this is a new spin trigger
+                    if (spinId !== appState.currentSpinId && !appState.isSpinning) {
+                        appState.currentSpinId = spinId;
+                        
+                        // Reset the trigger
+                        await updateAirtableRecord(AIRTABLE_CONFIG.ADMIN_TABLE, spinRecord.id, {
+                            'Trigger Spin': false
+                        });
+                        
+                        return true;
+                    }
+                }
+                return false;
+            } catch (error) {
+                console.error('Error checking spin trigger:', error);
+                return false;
+            }
+        }
+
+        async function markWinner(participant, position) {
+            try {
+                await updateAirtableRecord(AIRTABLE_CONFIG.PARTICIPANTS_TABLE, participant.id, {
+                    Status: 'Winner'
+                });
+                console.log(`Marked ${participant.name} as winner`);
+            } catch (error) {
+                console.error('Error marking winner:', error);
+                showError('Failed to mark winner in database');
+            }
+        }
+
+        // ============================================================================
+        // UI UPDATE FUNCTIONS
+        // ============================================================================
+        
         function createWheel() {
             const wheel = $('#wheel');
             wheel.empty();
             
-            if (participants.length === 0) {
+            if (appState.participants.length === 0) {
                 wheel.css('background', 'conic-gradient(from 0deg, #1c2128, #2a3038)');
                 return;
             }
 
-            const segmentAngle = 360 / participants.length;
+            const segmentAngle = 360 / appState.participants.length;
             let gradientStops = [];
             
-            participants.forEach((participant, index) => {
+            appState.participants.forEach((participant, index) => {
                 const startAngle = index * segmentAngle;
                 const endAngle = (index + 1) * segmentAngle;
                 const color = wheelColors[index % wheelColors.length];
@@ -691,12 +962,15 @@
                 
                 // Create number display
                 const numberDiv = $('<div class="wheel-number"></div>');
+                const isHighlighted = participant.name === appState.highlightedUser || 
+                                     participant.email === userEmail;
+                
                 numberDiv.html(`
-                    <div class="number-display ${participant.isHighlighted ? 'highlighted' : ''}" 
+                    <div class="number-display ${isHighlighted ? 'highlighted' : ''}" 
                          style="--rotate: ${startAngle + segmentAngle/2}deg">
                         ${index + 1}
                     </div>
-                    <div class="participant-name ${participant.isHighlighted ? 'highlighted' : ''}" 
+                    <div class="participant-name ${isHighlighted ? 'highlighted' : ''}" 
                          style="--rotate: ${startAngle + segmentAngle/2}deg">
                         ${participant.name}
                     </div>
@@ -707,15 +981,27 @@
             wheel.css('background', `conic-gradient(from 0deg, ${gradientStops.join(', ')})`);
         }
 
-        // Update participants display
         function updateParticipantsDisplay() {
             const grid = $('#participantsGrid');
             const count = $('#participantCount');
             
+            if (appState.participants.length === 0) {
+                grid.html(`
+                    <div style="grid-column: 1 / -1; text-align: center; color: #8a9199; padding: 40px 20px;">
+                        Waiting for players to join...
+                    </div>
+                `);
+                count.text('0');
+                return;
+            }
+            
             let html = '';
-            participants.forEach((p, index) => {
+            appState.participants.forEach((p, index) => {
+                const isHighlighted = p.name === appState.highlightedUser || 
+                                     p.email === userEmail;
+                                     
                 html += `
-                    <div class="participant-slot ${p.isHighlighted ? 'highlighted' : ''}">
+                    <div class="participant-slot ${isHighlighted ? 'highlighted' : ''}">
                         <div class="slot-number">${index + 1}</div>
                         <div class="slot-name">${p.name}</div>
                     </div>
@@ -723,336 +1009,241 @@
             });
             
             grid.html(html);
-            count.text(participants.length);
+            count.text(appState.participants.length);
         }
 
-        // Update queue display
         function updateQueueDisplay() {
             const queueSection = $('#queueSection');
             const queueList = $('#queueList');
             const queueCount = $('#queueCount');
             
-            if (queue.length === 0) {
+            if (appState.queue.length === 0) {
                 queueSection.hide();
             } else {
                 queueSection.show();
                 let html = '';
-                queue.forEach((name, index) => {
+                appState.queue.forEach((person, index) => {
                     html += `
                         <div class="queue-item">
-                            <span>${name}</span>
-                            <span class="queue-position">#${participants.length + index + 1}</span>
+                            <span>${person.name}</span>
+                            <span class="queue-position">#${appState.participants.length + index + 1}</span>
                         </div>
                     `;
                 });
                 queueList.html(html);
             }
             
-            queueCount.text(queue.length);
+            queueCount.text(appState.queue.length);
         }
 
-        // Show user banner if they're highlighted
         function showUserBanner() {
-            if (!highlightedUser) return;
+            if (!appState.highlightedUser && !userEmail && !userName) return;
             
             const banner = $('#userBanner');
             const userNameSpan = $('#userName');
             const userNumberSpan = $('#userNumber');
             
-            const userIndex = participants.findIndex(p => p.isHighlighted);
+            // Find user in participants
+            let userIndex = -1;
+            let displayName = appState.highlightedUser || userName || 'Player';
+            
+            if (userName || userEmail) {
+                userIndex = appState.participants.findIndex(p => 
+                    p.name === userName || p.email === userEmail
+                );
+            } else if (appState.highlightedUser) {
+                userIndex = appState.participants.findIndex(p => p.name === appState.highlightedUser);
+            }
+            
             if (userIndex !== -1) {
-                userNameSpan.text(highlightedUser);
+                userNameSpan.text(displayName);
                 userNumberSpan.text(userIndex + 1);
                 banner.addClass('show');
+            } else {
+                banner.removeClass('show');
             }
         }
 
-        // Fetch data from Airtable
-        async function fetchAirtableData() {
-            try {
-                const response = await fetch(
-                    `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_NAME}`,
-                    {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
-                            'Content-Type': 'application/json'
-                        }
-                    }
-                );
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                processAirtableData(data.records);
-                
-                $('#connectionStatus').text('Connected');
-                $('.status-dot').css('background', '#4ade80');
-                
-            } catch (error) {
-                console.error('Error fetching Airtable data:', error);
-                $('#connectionStatus').text('Connection Error');
-                $('.status-dot').css('background', '#ff4444');
-            }
-        }
-
-        // Check for spin trigger
-        async function checkSpinTrigger() {
-            try {
-                const response = await fetch(
-                    `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Admin%20Controls?maxRecords=1&sort%5B0%5D%5Bfield%5D=Created%20Time&sort%5B0%5D%5Bdirection%5D=desc`,
-                    {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
-                            'Content-Type': 'application/json'
-                        }
-                    }
-                );
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.records && data.records.length > 0) {
-                        const record = data.records[0];
-                        if (record.fields['Trigger Spin'] && record.id !== lastSpinCheck) {
-                            lastSpinCheck = record.id;
-                            if (!isSpinning && participants.length > 0) {
-                                spinWheel();
-                            }
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error checking spin trigger:', error);
-            }
-        }
-
-        // Process Airtable data
-        function processAirtableData(records) {
-            const newParticipants = [];
-            const newQueue = [];
-            
-            records.forEach((record, index) => {
-                const fields = record.fields;
-                
-                if (fields.Name && fields.Status !== 'Inactive' && fields.Status !== 'Winner') {
-                    const participant = {
-                        name: fields.Name,
-                        email: fields.Email || '',
-                        weight: fields.Weight || 1,
-                        isHighlighted: false
-                    };
-                    
-                    // Check if this is the highlighted user
-                    if (userEmail && fields.Email && fields.Email.toLowerCase() === userEmail.toLowerCase()) {
-                        participant.isHighlighted = true;
-                        highlightedUser = fields.Name;
-                    } else if (userName && fields.Name && fields.Name.toLowerCase() === userName.toLowerCase()) {
-                        participant.isHighlighted = true;
-                        highlightedUser = fields.Name;
-                    }
-                    
-                    if (index < 36) {
-                        newParticipants.push(participant);
-                    } else {
-                        newQueue.push(fields.Name);
-                    }
-                }
-            });
-            
-            // Update state
-            participants = newParticipants;
-            queue = newQueue;
-            
-            // Update displays
-            updateParticipantsDisplay();
-            updateQueueDisplay();
-            createWheel();
-            showUserBanner();
-        }
-
-        // Spin the wheel
-        function spinWheel() {
-            if (isSpinning || participants.length === 0) return;
-            
-            isSpinning = true;
-            const wheel = $('#wheel');
-            const spinIndicator = $('#spinningIndicator');
-            
-            spinIndicator.addClass('show');
-            
-            // Calculate weighted random winner
-            const totalWeight = participants.reduce((sum, p) => sum + p.weight, 0);
-            let random = Math.random() * totalWeight;
-            let winnerIndex = 0;
-            
-            for (let i = 0; i < participants.length; i++) {
-                random -= participants[i].weight;
-                if (random <= 0) {
-                    winnerIndex = i;
-                    break;
-                }
-            }
-            
-            // Calculate rotation
-            const segmentAngle = 360 / participants.length;
-            const winnerAngle = winnerIndex * segmentAngle + segmentAngle / 2;
-            const spins = 5 + Math.floor(Math.random() * 5);
-            const finalRotation = spins * 360 + (360 - winnerAngle);
-            
-            wheel.css('transform', `rotate(${finalRotation}deg)`);
-            
-            // Show winner after spin
-            setTimeout(() => {
-                showWinner(participants[winnerIndex].name, winnerIndex + 1);
-                spinIndicator.removeClass('show');
-                isSpinning = false;
-                
-                // Create confetti
-                createConfetti();
-                
-                // Update winner status in Airtable
-                updateWinnerInAirtable(participants[winnerIndex].name);
-            }, 4000);
-        }
-
-        // Update winner in Airtable
-        async function updateWinnerInAirtable(winnerName) {
-            try {
-                // First, find the winner's record ID
-                const response = await fetch(
-                    `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_NAME}?filterByFormula={Name}='${winnerName}'`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${AIRTABLE_API_KEY}`
-                        }
-                    }
-                );
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.records && data.records.length > 0) {
-                        const recordId = data.records[0].id;
-                        
-                        // Update the status to Winner
-                        await fetch(
-                            `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_NAME}/${recordId}`,
-                            {
-                                method: 'PATCH',
-                                headers: {
-                                    'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    fields: {
-                                        Status: 'Winner'
-                                    }
-                                })
-                            }
-                        );
-                    }
-                }
-            } catch (error) {
-                console.error('Error updating winner:', error);
-            }
-        }
-
-        // Show winner announcement
-        function showWinner(name, number) {
+        function showWinnerAnnouncement(winner, position) {
             const announcement = $('#winnerAnnouncement');
-            const winnerName = $('#winnerName');
             const winnerNumber = $('#winnerNumber');
+            const winnerName = $('#winnerName');
             
-            winnerName.text(name);
-            winnerNumber.text(number);
+            winnerNumber.text(position);
+            winnerName.text(winner.name);
+            
             announcement.addClass('show');
+            createConfetti();
             
+            // Auto-hide after 10 seconds
             setTimeout(() => {
                 announcement.removeClass('show');
-                // Refresh data after winner announcement
-                fetchAirtableData();
-            }, 5000);
+            }, 10000);
         }
 
-        // Create confetti effect
-        function createConfetti() {
-            const colors = ['#007aff', '#00d4ff', '#f4f8ff', '#0056b3', '#8a9199'];
-            
-            for (let i = 0; i < 50; i++) {
-                setTimeout(() => {
-                    const confetti = $('<div class="confetti"></div>');
-                    confetti.css({
-                        left: Math.random() * 100 + '%',
-                        background: colors[Math.floor(Math.random() * colors.length)],
-                        animationDelay: Math.random() * 1 + 's'
-                    });
-                    $('body').append(confetti);
-                    
-                    setTimeout(() => confetti.remove(), 3000);
-                }, i * 50);
+        // ============================================================================
+        // WHEEL SPINNING LOGIC
+        // ============================================================================
+        
+        function spinWheel() {
+            if (appState.isSpinning || appState.participants.length === 0) {
+                return;
             }
-        }
-
-        // Simulate data for demo (remove this in production)
-        function simulateData() {
-            const names = [
-                'Alice Johnson', 'Bob Smith', 'Charlie Brown', 'Diana Prince', 
-                'Ethan Hunt', 'Fiona Apple', 'George Lucas', 'Hannah Montana',
-                'Ian McKellen', 'Julia Roberts', 'Kevin Hart', 'Lisa Simpson',
-                'Mike Tyson', 'Nancy Drew', 'Oscar Wilde', 'Penny Lane'
-            ];
             
-            participants = names.slice(0, Math.min(16, names.length)).map((name, index) => ({
-                name,
-                email: `${name.toLowerCase().replace(' ', '.')}@example.com`,
-                weight: Math.random() > 0.8 ? 3 : 1,
-                isHighlighted: false
-            }));
+            console.log('Starting wheel spin...');
+            appState.isSpinning = true;
             
-            // Check for highlighted user from URL params
-            if (userName || userEmail) {
-                participants.forEach(p => {
-                    if (userEmail && p.email.toLowerCase() === userEmail.toLowerCase()) {
-                        p.isHighlighted = true;
-                        highlightedUser = p.name;
-                    } else if (userName && p.name.toLowerCase() === userName.toLowerCase()) {
-                        p.isHighlighted = true;
-                        highlightedUser = p.name;
-                    }
-                });
+            const wheel = $('#wheel');
+            const center = $('#wheelCenter');
+            const indicator = $('#spinningIndicator');
+            
+            // Disable wheel center button
+            center.addClass('disabled').text('SPINNING');
+            indicator.addClass('show');
+            
+            // Calculate winning position
+            const winnerIndex = Math.floor(Math.random() * appState.participants.length);
+            const winner = appState.participants[winnerIndex];
+            console.log(`Selected winner: ${winner.name} at position ${winnerIndex + 1}`);
+            
+            // Calculate spin rotation
+            const segmentAngle = 360 / appState.participants.length;
+            const targetAngle = (winnerIndex * segmentAngle) + (segmentAngle / 2);
+            const spins = 8; // Number of full rotations
+            const finalRotation = (spins * 360) + (360 - targetAngle); // Point to winner
+            
+            // Apply spinning class and rotation
+            wheel.addClass('spinning');
+            wheel.css('transform', `rotate(${finalRotation}deg)`);
+            
+            // Handle spin completion
+            setTimeout(async () => {
+                console.log(`Spin complete! Winner: ${winner.name}`);
                 
-                if (highlightedUser) {
-                    showUserBanner();
-                }
-            }
-            
-            queue = names.slice(16);
-            
-            updateParticipantsDisplay();
-            updateQueueDisplay();
-            createWheel();
+                // Reset UI
+                appState.isSpinning = false;
+                center.removeClass('disabled').text('SPIN');
+                indicator.removeClass('show');
+                wheel.removeClass('spinning');
+                
+                // Mark winner in database
+                await markWinner(winner, winnerIndex + 1);
+                
+                // Show winner announcement
+                showWinnerAnnouncement(winner, winnerIndex + 1);
+                
+                // Refresh data after short delay
+                setTimeout(refreshData, 2000);
+                
+            }, 4000); // Match CSS transition duration
         }
 
-        // Initialize
+        // ============================================================================
+        // DATA REFRESH & POLLING
+        // ============================================================================
+        
+        async function refreshData() {
+            try {
+                console.log('Refreshing data from Airtable...');
+                
+                // Fetch participants
+                const allParticipants = await fetchParticipants();
+                
+                // Split into active participants (first 36) and queue
+                appState.participants = allParticipants.slice(0, 36);
+                appState.queue = allParticipants.slice(36);
+                
+                // Set highlighted user
+                if (userName || userEmail) {
+                    const user = allParticipants.find(p => 
+                        p.name === userName || p.email === userEmail
+                    );
+                    if (user) {
+                        appState.highlightedUser = user.name;
+                    }
+                }
+                
+                // Update UI
+                createWheel();
+                updateParticipantsDisplay();
+                updateQueueDisplay();
+                showUserBanner();
+                
+                updateConnectionStatus('connected');
+                console.log(`Updated: ${appState.participants.length} participants, ${appState.queue.length} in queue`);
+                
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                updateConnectionStatus('error');
+                showError('Failed to fetch data from Airtable');
+            }
+        }
+
+        async function pollForUpdates() {
+            try {
+                // Check for spin trigger
+                if (!appState.isSpinning) {
+                    const shouldSpin = await checkSpinTrigger();
+                    if (shouldSpin) {
+                        console.log('Spin triggered by admin');
+                        spinWheel();
+                        return; // Skip data refresh during spin
+                    }
+                }
+                
+                // Refresh participant data
+                await refreshData();
+                
+            } catch (error) {
+                console.error('Error in polling loop:', error);
+            }
+        }
+
+        // ============================================================================
+        // EVENT HANDLERS & INITIALIZATION
+        // ============================================================================
+        
         $(document).ready(function() {
-            // Start with fetching real data
-            fetchAirtableData();
+            console.log('Avoca Royale initializing...');
+            console.log('User email:', userEmail);
+            console.log('User name:', userName);
             
-            // Set up polling
-            setInterval(fetchAirtableData, POLLING_INTERVAL);
-            setInterval(checkSpinTrigger, POLLING_INTERVAL);
-            
-            // For testing - uncomment to use simulated data
-            // simulateData();
-            
-            // Demo spin button (remove in production - spins will be triggered from Airtable)
-            $('.wheel-center').on('click', function() {
-                if (!isSpinning) spinWheel();
+            // Manual spin click handler (for testing)
+            $('#wheelCenter').on('click', function() {
+                if (!$(this).hasClass('disabled')) {
+                    console.log('Manual spin triggered');
+                    spinWheel();
+                }
             });
+            
+            // Close winner announcement on click
+            $('#winnerAnnouncement').on('click', function() {
+                $(this).removeClass('show');
+            });
+            
+            // Initial data load
+            refreshData();
+            
+            // Start polling loop
+            setInterval(pollForUpdates, AIRTABLE_CONFIG.POLLING_INTERVAL);
+            
+            console.log('Avoca Royale initialized successfully');
         });
+
+        // ============================================================================
+        // DEBUG FUNCTIONS (for development/testing)
+        // ============================================================================
+        
+        // Expose functions to global scope for debugging
+        window.avocaDebug = {
+            refreshData,
+            spinWheel,
+            showError,
+            appState,
+            AIRTABLE_CONFIG
+        };
+        
+        console.log('Debug functions available at window.avocaDebug');
     </script>
 </body>
 </html>
-                
