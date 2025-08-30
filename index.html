@@ -1,1247 +1,510 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avoca Royale</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #1c2128 0%, #2a3038 50%, #1c2128 100%);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            color: #f4f8ff;
-            overflow-x: hidden;
-            position: relative;
-        }
-
-        body::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: 
-                radial-gradient(circle at 20% 50%, rgba(0, 122, 255, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(0, 122, 255, 0.05) 0%, transparent 50%);
-            pointer-events: none;
-        }
-
-        .casino-lights {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, 
-                #007aff 0%, #0056b3 25%, #007aff 50%, 
-                #0056b3 75%, #007aff 100%);
-            background-size: 200% 100%;
-            animation: lights 3s linear infinite;
-            box-shadow: 0 2px 20px rgba(0, 122, 255, 0.5);
-        }
-
-        @keyframes lights {
-            0% { background-position: 0% 0%; }
-            100% { background-position: 200% 0%; }
-        }
-
-        .header {
-            text-align: center;
-            margin: 40px 0 30px;
-            z-index: 10;
-            position: relative;
-        }
-
-        .header h1 {
-            font-size: 4.5em;
-            font-weight: 300;
-            letter-spacing: 8px;
-            margin-bottom: 10px;
-            background: linear-gradient(135deg, #f4f8ff 0%, #007aff 50%, #f4f8ff 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-transform: uppercase;
-            text-shadow: 0 0 40px rgba(0, 122, 255, 0.3);
-        }
-
-        .subtitle {
-            font-size: 1em;
-            color: #8a9199;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            font-weight: 500;
-        }
-
-        .status-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 24px;
-            background: rgba(244, 248, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 122, 255, 0.3);
-            border-radius: 30px;
-            margin-top: 20px;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #4ade80;
-            animation: pulse 2s infinite;
-            box-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
-        }
-
-        .status-dot.disconnected {
-            background: #ef4444;
-            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(1.2); }
-        }
-
-        .main-container {
-            display: flex;
-            gap: 50px;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: flex-start;
-            width: 100%;
-            max-width: 1600px;
-            z-index: 10;
-            position: relative;
-        }
-
-        .roulette-table {
-            background: linear-gradient(145deg, #242a32 0%, #1c2128 100%);
-            border: 1px solid rgba(0, 122, 255, 0.2);
-            border-radius: 25px;
-            padding: 35px;
-            box-shadow: 
-                0 20px 60px rgba(0, 0, 0, 0.5),
-                0 0 100px rgba(0, 122, 255, 0.1),
-                inset 0 1px 0 rgba(244, 248, 255, 0.05);
-            position: relative;
-        }
-
-        .wheel-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 30px;
-        }
-
-        .wheel-container {
-            position: relative;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, #1c2128 0%, #0f1114 100%);
-            border-radius: 50%;
-            padding: 20px;
-            box-shadow: 
-                inset 0 0 60px rgba(0, 0, 0, 0.8),
-                0 0 80px rgba(0, 122, 255, 0.2);
-        }
-
-        .wheel {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 
-                0 0 40px rgba(0, 122, 255, 0.3),
-                inset 0 0 30px rgba(0, 0, 0, 0.5);
-            transition: transform 4s cubic-bezier(0.25, 0.1, 0.25, 1);
-            border: 2px solid rgba(244, 248, 255, 0.1);
-            background: conic-gradient(from 0deg, #1c2128, #2a3038);
-        }
-
-        .wheel.spinning {
-            transition: transform 4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-        .wheel-number { position:absolute; inset:0; transform-origin:50% 50%; }
-
-
-/*         .wheel-number {
-            position: absolute;
-            inset:0;
-            transform-origin:50% 50%;
-            width: 50%;
-            height: 50%;
-            transform-origin: right bottom;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        } */
-
-        .number-display {
-            position: absolute;
-            width: 45px;
-            height: 45px;
-            background: linear-gradient(135deg, #007aff 0%, #0056b3 100%);
-            border: 2px solid rgba(244, 248, 255, 0.9);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 18px;
-            color: #f4f8ff;
-            box-shadow: 
-                0 2px 10px rgba(0, 0, 0, 0.5),
-                inset 0 -2px 5px rgba(0, 0, 0, 0.3);
-            transform: rotate(var(--rotate)) translateX(180px) rotate(calc(-1 * var(--rotate)));
-            transition: all 0.3s ease;
-        }
-
-        .number-display.highlighted {
-            transform: rotate(var(--rotate)) translateX(180px) rotate(calc(-1 * var(--rotate))) scale(1.5);
-            background: linear-gradient(135deg, #00d4ff 0%, #007aff 100%);
-            box-shadow: 
-                0 0 30px rgba(0, 212, 255, 0.8),
-                0 2px 10px rgba(0,0,0,0.5),
-                inset 0 -2px 5px rgba(0,0,0,0.3);
-            animation: glow 1s ease-in-out infinite alternate;
-            z-index: 100;
-            border-color: #f4f8ff;
-        }
-
-        @keyframes glow {
-            from { box-shadow: 0 0 30px rgba(0, 212, 255, 0.8), 0 2px 10px rgba(0,0,0,0.5); }
-            to { box-shadow: 0 0 50px rgba(0, 212, 255, 1), 0 2px 10px rgba(0,0,0,0.5); }
-        }
-
-.participant-name{
-  position:absolute;
-  width:140px;                 /* give room for centering */
-  margin-left:-70px;           /* center the 140px box on the anchor */
-  left:50%;
-  text-align:center;
-  transform: rotate(var(--rotate)) translateX(140px) rotate(calc(-1 * var(--rotate)));
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-        .participant-name.highlighted {
-            font-size: 14px;
-            font-weight: 600;
-            color: #00d4ff;
-            text-shadow: 
-                0 0 10px rgba(0, 212, 255, 0.8),
-                1px 1px 2px rgba(0,0,0,0.8);
-        }
-
-        .wheel-center {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(135deg, #007aff 0%, #0056b3 100%);
-            border-radius: 50%;
-            border: 3px solid rgba(244, 248, 255, 0.9);
-            box-shadow: 
-                0 0 40px rgba(0, 122, 255, 0.5),
-                inset 0 -3px 10px rgba(0,0,0,0.3);
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 16px;
-            color: #f4f8ff;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            user-select: none;
-        }
-
-        .pointer {
-            position: absolute;
-            top: -35px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 25px solid transparent;
-            border-right: 25px solid transparent;
-            border-top: 50px solid #00d4ff;
-            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));
-            z-index: 11;
-            animation: bounce 2s infinite;
-        }
-
-        .pointer::after {
-            content: '';
-            position: absolute;
-            top: -50px;
-            left: -10px;
-            width: 20px;
-            height: 20px;
-            background: radial-gradient(circle, #00d4ff 0%, #007aff 100%);
-            border-radius: 50%;
-            box-shadow: 0 0 20px rgba(0, 212, 255, 0.8);
-        }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateX(-50%) translateY(0); }
-            50% { transform: translateX(-50%) translateY(-10px); }
-        }
-
-        .info-panels {
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
-            min-width: 400px;
-        }
-
-        .panel {
-            background: linear-gradient(145deg, #242a32 0%, #1c2128 100%);
-            border: 1px solid rgba(0, 122, 255, 0.2);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 
-                0 10px 40px rgba(0,0,0,0.5),
-                inset 0 1px 0 rgba(244, 248, 255, 0.05);
-            position: relative;
-        }
-
-        .panel h2 {
-            margin-bottom: 25px;
-            font-size: 1.5em;
-            font-weight: 300;
-            color: #f4f8ff;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .participants-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 12px;
-            max-height: 400px;
-            overflow-y: auto;
-            padding: 20px;
-            background: rgba(28, 33, 40, 0.5);
-            border-radius: 15px;
-            border: 1px solid rgba(0, 122, 255, 0.1);
-        }
-
-        .participant-slot {
-            background: linear-gradient(135deg, #2a3038 0%, #1c2128 100%);
-            border: 1px solid rgba(0, 122, 255, 0.2);
-            border-radius: 12px;
-            padding: 12px 8px;
-            text-align: center;
-            position: relative;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .participant-slot:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 20px rgba(0, 122, 255, 0.3);
-            border-color: #007aff;
-            background: linear-gradient(135deg, #2e343d 0%, #20252c 100%);
-        }
-
-        .participant-slot.highlighted {
-            background: linear-gradient(135deg, #007aff 0%, #0056b3 100%);
-            border-color: #00d4ff;
-            transform: scale(1.1);
-            box-shadow: 0 0 30px rgba(0, 212, 255, 0.6);
-            animation: pulse-highlight 1s ease-in-out infinite;
-        }
-
-        @keyframes pulse-highlight {
-            0%, 100% { transform: scale(1.1); }
-            50% { transform: scale(1.15); }
-        }
-
-        .slot-number {
-            font-size: 24px;
-            font-weight: 600;
-            color: #007aff;
-            margin-bottom: 5px;
-        }
-
-        .slot-name {
-            font-size: 11px;
-            color: rgba(244, 248, 255, 0.8);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .participant-slot.highlighted .slot-number,
-        .participant-slot.highlighted .slot-name {
-            color: #f4f8ff;
-        }
-
-        .queue-section {
-            margin-top: 20px;
-            padding: 20px;
-            background: rgba(28, 33, 40, 0.5);
-            border-radius: 15px;
-            border: 1px solid rgba(0, 122, 255, 0.1);
-        }
-
-        .queue-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .queue-item {
-            padding: 10px 18px;
-            background: linear-gradient(135deg, #2a3038 0%, #1c2128 100%);
-            border: 1px solid rgba(0, 122, 255, 0.2);
-            border-radius: 25px;
-            font-size: 14px;
-            color: rgba(244, 248, 255, 0.9);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .queue-position {
-            background: rgba(0, 122, 255, 0.2);
-            color: #00d4ff;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .winner-announcement {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0);
-            background: linear-gradient(145deg, #242a32 0%, #1c2128 100%);
-            padding: 60px;
-            border-radius: 30px;
-            border: 2px solid #007aff;
-            box-shadow: 
-                0 30px 100px rgba(0,0,0,0.8),
-                0 0 150px rgba(0, 122, 255, 0.4),
-                inset 0 1px 0 rgba(244, 248, 255, 0.1);
-            z-index: 1000;
-            text-align: center;
-            display: none;
-        }
-
-        .winner-announcement.show {
-            display: block;
-            animation: winnerPop 0.5s ease forwards;
-        }
-
-        @keyframes winnerPop {
-            0% { transform: translate(-50%, -50%) scale(0) rotate(180deg); }
-            60% { transform: translate(-50%, -50%) scale(1.1) rotate(-10deg); }
-            100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
-        }
-
-        .winner-text {
-            font-size: 1.2em;
-            color: #8a9199;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            font-weight: 300;
-        }
-
-        .winner-number {
-            font-size: 5em;
-            font-weight: 700;
-            background: linear-gradient(135deg, #00d4ff 0%, #007aff 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: 0 0 40px rgba(0, 122, 255, 0.5);
-            margin: 20px 0;
-        }
-
-        .winner-name {
-            font-size: 2.5em;
-            font-weight: 300;
-            color: #f4f8ff;
-            margin: 20px 0;
-            letter-spacing: 2px;
-        }
-
-        .confetti {
-            position: fixed;
-            width: 10px;
-            height: 10px;
-            animation: confetti-fall 3s linear;
-            pointer-events: none;
-        }
-
-        @keyframes confetti-fall {
-            0% { 
-                transform: translateY(-100vh) rotate(0deg); 
-                opacity: 1; 
-            }
-            100% { 
-                transform: translateY(100vh) rotate(720deg); 
-                opacity: 0; 
-            }
-        }
-
-        .spinning-indicator {
-            display: none;
-            background: linear-gradient(135deg, #00d4ff 0%, #007aff 100%);
-            color: #f4f8ff;
-            padding: 15px 40px;
-            border-radius: 30px;
-            position: absolute;
-            bottom: -70px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-weight: 600;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            box-shadow: 0 5px 30px rgba(0, 122, 255, 0.5);
-            animation: pulse-spin 1s infinite;
-        }
-
-        @keyframes pulse-spin {
-            0%, 100% { transform: translateX(-50%) scale(1); }
-            50% { transform: translateX(-50%) scale(1.05); }
-        }
-
-        .spinning-indicator.show {
-            display: block;
-        }
-
-        .user-highlight-banner {
-            position: fixed;
-            top: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, #007aff 0%, #0056b3 100%);
-            padding: 18px 40px;
-            border-radius: 40px;
-            border: 1px solid rgba(244, 248, 255, 0.3);
-            box-shadow: 0 10px 40px rgba(0, 122, 255, 0.4);
-            z-index: 1000;
-            display: none;
-            animation: slideDown 0.5s ease;
-        }
-
-        .user-highlight-banner.show {
-            display: block;
-        }
-
-        @keyframes slideDown {
-            from { transform: translateX(-50%) translateY(-100px); opacity: 0; }
-            to { transform: translateX(-50%) translateY(0); opacity: 1; }
-        }
-
-        .highlight-text {
-            font-size: 1.1em;
-            font-weight: 500;
-            color: #f4f8ff;
-            letter-spacing: 1px;
-        }
-
-        .highlight-number {
-            font-size: 2em;
-            margin: 0 15px;
-            font-weight: 700;
-            color: #f4f8ff;
-            text-shadow: 0 0 10px rgba(244, 248, 255, 0.5);
-        }
-
-        .error-message {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            padding: 15px 25px;
-            border-radius: 10px;
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #f4f8ff;
-            font-size: 14px;
-            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
-            z-index: 1000;
-            display: none;
-            animation: slideIn 0.3s ease;
-        }
-
-        .error-message.show {
-            display: block;
-        }
-
-        @keyframes slideIn {
-            from { transform: translateX(100px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        /* Scrollbar styling */
-        ::-webkit-scrollbar {
-            width: 10px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: rgba(28, 33, 40, 0.5);
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, #007aff 0%, #0056b3 100%);
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, #00d4ff 0%, #007aff 100%);
-        }
-
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .main-container {
-                flex-direction: column;
-                gap: 30px;
-            }
-            
-            .wheel-container {
-                width: 350px;
-                height: 350px;
-            }
-            
-            .info-panels {
-                min-width: auto;
-                width: 100%;
-                max-width: 400px;
-            }
-            
-            .header h1 {
-                font-size: 2.5em;
-                letter-spacing: 4px;
-            }
-            
-            .participants-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Avoca Royal</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+  <style>
+    :root{
+      /* One dial to size BOTH the wheel and the header image */
+      --wheel-size: clamp(320px, 64vw, 520px);
+
+      --bg: #f7f8fb;
+      --ink: #0b0f1a;
+      --muted: #6b7280;
+      --card: #ffffff;
+      --stroke: #e5e7eb;
+      --shadow: 0 8px 24px rgba(15, 23, 42, .08);
+      --blue: #1976ff;
+      --blue-ink: #fff;
+      --green: #1fb36e;
+      --red: #d83a32;
+      --black: #2b2f36;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body{
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(#0000 31px, rgba(0,0,0,.03) 32px) 0 0/32px 32px,
+        linear-gradient(90deg,#0000 31px, rgba(0,0,0,.03) 32px) 0 0/32px 32px,
+        var(--bg);
+      min-height: 100vh;
+      padding: 32px 20px 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Header image that always equals the wheel size */
+    .header { width: 100%; max-width: 1200px; margin: 0 auto 12px; display:flex; align-items:flex-start; }
+    .hero-wrap { width: var(--wheel-size); }
+    .hero-wrap img{ width: 100%; height: auto; display:block; }
+
+    /* Connection pill (kept) */
+    .status-indicator{
+      margin-left: 18px;
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 14px; border-radius:999px; border:1px solid var(--stroke); background:#fff; box-shadow: var(--shadow);
+      font-size: 13px; color:#374151;
+      height: fit-content;
+    }
+    .status-dot{ width:8px; height:8px; border-radius:999px; background:#22c55e; }
+    .status-dot.disconnected{ background:#ef4444; }
+
+    /* Main layout */
+    .main-container{
+      width: 100%;
+      max-width: 1200px;
+      margin: 16px auto 0;
+      display: grid;
+      grid-template-columns: minmax(280px, var(--wheel-size)) 1fr;
+      gap: 36px;
+      align-items: start;
+    }
+
+    /* Wheel card */
+    .roulette-table{
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      display:flex; justify-content:center;
+    }
+
+    .wheel-section{ display: flex; flex-direction: column; align-items: center; gap: 18px; }
+
+    /* Pure circular wheel — no square background */
+    .wheel-container{
+      position: relative;
+      width: var(--wheel-size); height: var(--wheel-size);
+      border-radius: 50%;
+      background: transparent;
+    }
+    #wheel{
+      position: relative;
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      overflow: hidden;
+      transition: transform 4s cubic-bezier(.25,.46,.45,.94);
+    }
+    /* inner white rings */
+    #wheel::before{
+      content:"";
+      position:absolute; inset: calc(12px + 1.5%);
+      border-radius:50%;
+      box-shadow:
+        inset 0 0 0 10px #ffffffcc,
+        inset 0 0 0 12px #fff;
+      pointer-events:none;
+    }
+
+    .pointer{
+      position:absolute; top:-6px; left:50%; transform:translateX(-50%);
+      width:0; height:0;
+      border-left:18px solid transparent; border-right:18px solid transparent; border-top:28px solid var(--blue);
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,.25));
+      z-index: 5;
+    }
+
+    .wheel-center{
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      width: calc(var(--wheel-size) * 0.23);
+      height: calc(var(--wheel-size) * 0.23);
+      border-radius:999px; background:#fff;
+      border:1px solid var(--stroke); box-shadow: var(--shadow);
+      display:flex; align-items:center; justify-content:center;
+      padding: 8%;
+    }
+    /* AVOCA mark in the hub */
+    .wheel-center svg{ width:100%; height:auto; display:block; }
+
+    /* Centered numeric labels on wedges */
+    #wheel{ --r: calc(var(--wheel-size) * 0.42); }
+    .wedge-label{
+      position:absolute; top:50%; left:50%;
+      transform: rotate(var(--rotate)) translateX(var(--r)) rotate(calc(-1 * var(--rotate)));
+      transform-origin: center;
+      font-weight: 800;
+      font-size: clamp(12px, 2.6vw, 18px);
+      letter-spacing: .02em;
+      color: #fff;
+      text-shadow: 0 1px 0 #0006, 0 0 6px #0006;
+      user-select: none;
+    }
+
+    /* Right side – players card */
+    .info-panels{ display: grid; gap: 20px; }
+    .panel{
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+    .panel h2{ font-size: 22px; margin-bottom: 14px; }
+    .panel h2 span{ font-weight: 600; }
+
+    .participants-grid{
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      padding: 16px;
+      background: #f5f7fb;
+      border: 1px solid var(--stroke);
+      border-radius: 16px;
+      min-height: 180px;
+    }
+
+    .participant-slot{
+      background: #eef2f7;
+      border: 1px solid #e3e8f0;
+      border-radius: 12px;
+      padding: 12px 10px;
+      text-align: center;
+      transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    }
+    .participant-slot:hover{ transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.06); }
+
+    .slot-number{ font-size: 20px; font-weight: 800; color:#111827; line-height: 1; }
+    .slot-name{ font-size: 12px; color:#475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 6px; }
+
+    .participant-slot.highlighted{
+      background: var(--blue);
+      border-color: #cfe2ff;
+      box-shadow: 0 6px 18px rgba(25,118,255,.25);
+    }
+    .participant-slot.highlighted .slot-number,
+    .participant-slot.highlighted .slot-name{ color: #fff; }
+
+    /* Waitlist */
+    .queue-section{ margin-top: 16px; }
+    .queue-list{ display:flex; flex-wrap:wrap; gap:10px; }
+    .queue-item{
+      background:#eef2f7; border:1px solid #e3e8f0; color:#111827;
+      border-radius: 999px; padding: 8px 14px; font-size: 13px; display:flex; gap:8px; align-items:center;
+    }
+    .queue-position{
+      background:#e6ecfb; color:#3b63d8; border-radius: 999px; padding:2px 8px; font-weight:600; font-size:11px;
+    }
+
+    /* Winner modal (light) */
+    .winner-announcement{ position: fixed; inset: 0; display:none; place-items:center; z-index: 1000; }
+    .winner-announcement.show{ display:grid; }
+    .winner-card{
+      background:#fff; border:1px solid var(--stroke); border-radius: 24px; padding: 40px 48px; box-shadow: 0 24px 80px rgba(0,0,0,.15); text-align:center;
+      animation: pop .4s ease;
+    }
+    @keyframes pop{ from{ transform: scale(.9); opacity: 0 } to{ transform: scale(1); opacity:1 } }
+    .winner-text{ color:#6b7280; letter-spacing:.2em; text-transform:uppercase; font-size:13px; margin-bottom:8px; }
+    .winner-number{ font-size:64px; font-weight:800; color:#111827; line-height:1; }
+    .winner-name{ font-size:28px; margin-top:8px; }
+
+    /* Responsive */
+    @media (max-width: 1020px){
+      .main-container{ grid-template-columns: 1fr; }
+      .participants-grid{ grid-template-columns: repeat(5,1fr); }
+    }
+    @media (max-width: 560px){
+      .participants-grid{ grid-template-columns: repeat(3,1fr); }
+    }
+  </style>
 </head>
 <body>
-    <div class="casino-lights"></div>
-    
-    <div class="header">
-        <h1>Avoca Royale</h1>
-        <div class="subtitle">Where Fortune Meets Destiny</div>
-        <div class="status-indicator">
-            <div class="status-dot" id="statusDot"></div>
-            <span id="connectionStatus">Connecting...</span>
+  <!-- Header image that always matches wheel size -->
+  <div class="header">
+    <div class="hero-wrap">
+      <img
+        src="https://cdn.prod.website-files.com/681cf5f5bab419a4de9e6b73/68b274980ed7ce663f8b20c3_Frame%201533216873.png"
+        alt="AVOCA ROYAL — Don’t gamble on your business" />
+    </div>
+    <div class="status-indicator" title="Connection">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="connectionStatus">Connecting...</span>
+    </div>
+  </div>
+
+  <div class="main-container">
+    <!-- WHEEL -->
+    <div class="roulette-table">
+      <div class="wheel-section">
+        <div class="wheel-container">
+          <div class="pointer"></div>
+          <div class="wheel" id="wheel"></div>
+
+          <!-- Center hub with AVOCA mark -->
+          <div class="wheel-center" aria-label="Avoca Logo">
+            <svg viewBox="0 0 129 127" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M67.0111 30.1676L66.1747 30.1033C48.5039 29.3098 30.9188 26.3504 13.9128 21.3108C20.1748 28.4092 37.9743 49.4468 47.882 70.2701L48.1179 70.7634C55.6451 85.5605 61.4997 101.194 65.4027 117.407C69.1985 106.448 77.8194 83.7591 89.5285 66.6458L90.0003 65.9382C99.2432 51.3984 110.202 37.9521 122.726 26.0072C111.21 28.1517 87.4912 31.8188 67.0325 30.1676H67.0111Z" fill="#1C2128"/>
+              <path d="M89.872 76.0389C80.7363 91.3079 73.9168 109.15 70.4641 119.165L69.1774 122.875C70.9359 126.671 75.9326 127.936 79.2352 125.041C85.9689 119.187 92.6813 113.332 99.4151 107.456C101.281 105.826 102.053 103.296 101.409 100.915C98.7074 90.8576 96.0053 80.7998 93.3032 70.742L89.8934 76.1033L89.8505 76.0389H89.872Z" fill="#1C2128"/>
+              <path d="M5.69941 20.1102C2.13951 20.5391 -0.626909 23.9274 0.123672 27.7661C1.83929 36.5158 3.5549 45.2868 5.24907 54.0365C5.72086 56.4598 7.5437 58.4113 9.92412 59.0332C20.0248 61.7353 30.1469 64.4375 40.2476 67.1396C30.1684 48.4608 14.7064 30.3181 9.88123 24.8281L5.69941 20.0888V20.1102Z" fill="#1C2128"/>
+              <path d="M75.3532 25.1931C92.8739 25.4934 111.445 22.6411 121.718 20.7325L126.736 19.8104C129.609 16.4006 128.258 11.0607 123.926 9.581C115.499 6.6859 107.049 3.79082 98.6212 0.895726C96.2837 0.102254 93.6888 0.702656 91.9517 2.43972C84.4888 9.92408 77.0045 17.387 69.5415 24.8714L75.4175 25.1287L75.3746 25.2145L75.3532 25.1931Z" fill="#1C2128"/>
+            </svg>
+          </div>
         </div>
+      </div>
     </div>
 
-    <div class="user-highlight-banner" id="userBanner">
-        <div class="highlight-text">
-            Your Number: <span class="highlight-number" id="userNumber">-</span>
-            Good Luck, <span id="userName">Player</span>!
-        </div>
-    </div>
-
-    <div class="main-container">
-        <div class="roulette-table">
-            <div class="wheel-section">
-                <div class="wheel-container">
-                    <div class="pointer"></div>
-                    <div class="wheel" id="wheel"></div>
-                    <div class="wheel-center">SPIN</div>
-                    <div class="spinning-indicator" id="spinningIndicator">Spinning...</div>
-                </div>
-            </div>
+    <!-- RIGHT: PLAYERS -->
+    <div class="info-panels">
+      <div class="panel">
+        <h2>Players (<span id="participantCount">0</span>/36)</h2>
+        <div class="participants-grid" id="participantsGrid">
+          <div style="grid-column:1 / -1; text-align:center; color:#6b7280; padding:32px 12px;">
+            Waiting for players to join...
+          </div>
         </div>
 
-        <div class="info-panels">
-            <div class="panel">
-                <h2>Players (<span id="participantCount">0</span>/36)</h2>
-                <div class="participants-grid" id="participantsGrid">
-                    <div style="grid-column: 1 / -1; text-align: center; color: #8a9199; padding: 40px 20px;">
-                        Waiting for players to join...
-                    </div>
-                </div>
-                
-                <div class="queue-section" id="queueSection" style="display: none;">
-                    <h3 style="color: #f4f8ff; margin-bottom: 15px; font-weight: 300; letter-spacing: 1px;">WAITING LIST (<span id="queueCount">0</span>)</h3>
-                    <div class="queue-list" id="queueList"></div>
-                </div>
-            </div>
+        <div class="queue-section" id="queueSection" style="display:none;">
+          <h3 style="font-size:18px; margin:14px 0 10px;">Waitlist (<span id="queueCount">0</span>)</h3>
+          <div class="queue-list" id="queueList"></div>
         </div>
+      </div>
     </div>
+  </div>
 
-    <div class="winner-announcement" id="winnerAnnouncement">
-        <div class="winner-text">Winner</div>
-        <div class="winner-number" id="winnerNumber">00</div>
-        <div class="winner-name" id="winnerName"></div>
-        <div style="font-size: 1.1em; color: #8a9199; margin-top: 20px; letter-spacing: 2px;">CONGRATULATIONS</div>
+  <!-- Winner modal -->
+  <div class="winner-announcement" id="winnerAnnouncement">
+    <div class="winner-card">
+      <div class="winner-text">Winner</div>
+      <div class="winner-number" id="winnerNumber">00</div>
+      <div class="winner-name" id="winnerName"></div>
     </div>
+  </div>
 
-    <div class="error-message" id="errorMessage"></div>
+  <script>
+    // ============================================
+    // CONFIG
+    // ============================================
+    const AIRTABLE_CONFIG = {
+      API_KEY: 'patjFd8AqLFaguOEe.0926a467696986c2920b20907d6f7b8bc468592117c50e02d4303fbc29eb0ac1',
+      BASE_ID: 'appQm84VJgrmPJZal',
+      PARTICIPANTS_TABLE: 'Participants',
+      ADMIN_TABLE: 'Admin Controls',
+      POLLING_INTERVAL: 500
+    };
 
-    <script>
-        // ============================================================================
-        // CONFIGURATION - Update these values as needed
-        // ============================================================================
-        const AIRTABLE_CONFIG = {
-            API_KEY: 'patjFd8AqLFaguOEe.0926a467696986c2920b20907d6f7b8bc468592117c50e02d4303fbc29eb0ac1',
-            BASE_ID: 'appQm84VJgrmPJZal',
-            PARTICIPANTS_TABLE: 'Participants',
-            ADMIN_TABLE: 'Admin Controls',
-            POLLING_INTERVAL: 500 // .5sec
-        };
+    // ============================================
+    // STATE & URL PARAMS
+    // ============================================
+    let appState = { participants:[], queue:[], isSpinning:false };
 
-        // ============================================================================
-        // GLOBAL STATE
-        // ============================================================================
-        let appState = {
-            participants: [],
-            queue: [],
-            isSpinning: false,
-            highlightedUser: null,
-            lastSpinCheck: null,
-            currentSpinId: null,
-            connectionStatus: 'connecting'
-        };
+    const urlParams = new URLSearchParams(window.location.search);
+    const norm = s => (s || "").toString().trim().toLowerCase();
+    const userEmail = urlParams.get('email');
+    const userName  = urlParams.get('name');
+    const userKey   = norm(userName) || norm(userEmail);
 
-        // URL Parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const userEmail = urlParams.get('email');
-        const userName = urlParams.get('name');
-
-        // Wheel segment colors (alternating dark blue and lighter variations)
-        const wheelColors = [
-            '#007aff', '#0056b3', '#003d80', '#004c99', 
-            '#0066cc', '#0052a3', '#003366', '#004080',
-            '#0059b3', '#003f7f', '#004d99', '#0066cc',
-            '#007aff', '#0056b3', '#003d80', '#004c99',
-            '#0066cc', '#0052a3', '#003366', '#004080',
-            '#0059b3', '#003f7f', '#004d99', '#0066cc',
-            '#007aff', '#0056b3', '#003d80', '#004c99',
-            '#0066cc', '#0052a3', '#003366', '#004080',
-            '#0059b3', '#003f7f', '#004d99', '#0066cc'
-        ];
-
-        // ============================================================================
-        // UTILITY FUNCTIONS
-        // ============================================================================
-        
-        function showError(message) {
-            console.error('Error:', message);
-            const errorEl = $('#errorMessage');
-            errorEl.text(message).addClass('show');
-            setTimeout(() => {
-                errorEl.removeClass('show');
-            }, 5000);
-        }
-
-        function updateConnectionStatus(status) {
-            appState.connectionStatus = status;
-            const statusEl = $('#connectionStatus');
-            const dotEl = $('#statusDot');
-            
-            switch(status) {
-                case 'connected':
-                    statusEl.text('Connected');
-                    dotEl.removeClass('disconnected');
-                    break;
-                case 'error':
-                    statusEl.text('Connection Error');
-                    dotEl.addClass('disconnected');
-                    break;
-                default:
-                    statusEl.text('Connecting...');
-                    dotEl.removeClass('disconnected');
-            }
-        }
-
-        function createConfetti() {
-            const colors = ['#007aff', '#00d4ff', '#f4f8ff', '#0056b3'];
-            
-            for (let i = 0; i < 50; i++) {
-                setTimeout(() => {
-                    const confetti = $('<div class="confetti"></div>');
-                    confetti.css({
-                        left: Math.random() * 100 + 'vw',
-                        backgroundColor: colors[Math.floor(Math.random() * colors.length)],
-                        borderRadius: Math.random() > 0.5 ? '50%' : '0',
-                        animationDelay: Math.random() * 3 + 's'
-                    });
-                    $('body').append(confetti);
-                    
-                    setTimeout(() => confetti.remove(), 3000);
-                }, i * 50);
-            }
-        }
-
-        // ============================================================================
-        // AIRTABLE API FUNCTIONS
-        // ============================================================================
-        
-        async function fetchFromAirtable(tableName, params = {}) {
-            try {
-                // Build URL with proper encoding for Airtable API
-                let url = `https://api.airtable.com/v0/${AIRTABLE_CONFIG.BASE_ID}/${tableName}`;
-                const searchParams = new URLSearchParams();
-                
-                // Handle each parameter properly
-                Object.entries(params).forEach(([key, value]) => {
-                    if (key === 'sort' && Array.isArray(value)) {
-                        // Sort parameter needs special handling
-                        value.forEach(sortObj => {
-                            searchParams.append('sort[0][field]', sortObj.field);
-                            searchParams.append('sort[0][direction]', sortObj.direction);
-                        });
-                    } else if (typeof value === 'string' || typeof value === 'number') {
-                        searchParams.append(key, value);
-                    }
-                });
-                
-                if (searchParams.toString()) {
-                    url += '?' + searchParams.toString();
-                }
-                
-                console.log('Fetching from URL:', url);
-                
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${AIRTABLE_CONFIG.API_KEY}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Airtable API Error:', errorText);
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                return data.records || [];
-            } catch (error) {
-                console.error(`Error fetching from ${tableName}:`, error);
-                throw error;
-            }
-        }
-
-        async function updateAirtableRecord(tableName, recordId, fields) {
-            try {
-                const url = `https://api.airtable.com/v0/${AIRTABLE_CONFIG.BASE_ID}/${tableName}/${recordId}`;
-                
-                const response = await fetch(url, {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${AIRTABLE_CONFIG.API_KEY}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ fields })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                return await response.json();
-            } catch (error) {
-                console.error(`Error updating record in ${tableName}:`, error);
-                throw error;
-            }
-        }
-
-        // ============================================================================
-        // DATA PROCESSING FUNCTIONS
-        // ============================================================================
-        
-        async function fetchParticipants() {
-            try {
-                // Simplify the query to avoid encoding issues
-                const records = await fetchFromAirtable(AIRTABLE_CONFIG.PARTICIPANTS_TABLE, {
-                    filterByFormula: "OR({Status} = 'Active', {Status} = '')",
-                    maxRecords: 100
-                });
-
-                const participants = records.map(record => ({
-                    id: record.id,
-                    name: record.fields.Name || 'Anonymous',
-                    email: record.fields.Email || '',
-                    weight: record.fields.Weight || 1,
-                    status: record.fields.Status || 'Active'
-                }));
-
-                // Sort by weight (higher weight = better position), then by name
-                participants.sort((a, b) => {
-                    if (b.weight !== a.weight) {
-                        return b.weight - a.weight;
-                    }
-                    return a.name.localeCompare(b.name);
-                });
-
-                return participants;
-            } catch (error) {
-                console.error('Error fetching participants:', error);
-                return [];
-            }
-        }
-
-let lastSpinIdSeen = null;
-
-async function checkSpinTrigger(){
-  try{
-    const records = await fetchFromAirtable(AIRTABLE_CONFIG.ADMIN_TABLE, {
-      filterByFormula: "{Trigger Spin} = TRUE()",
-      maxRecords: 1
-    });
-    if (!records.length) return false;
-
-    const rec = records[0];
-    const spinId = rec.fields['Spin ID'] || rec.id;
-
-    if (spinId === lastSpinIdSeen || appState.isSpinning) return false;
-
-    lastSpinIdSeen = spinId;
-
-    // immediately reset the trigger so other clients don’t re-trigger
-    await updateAirtableRecord(AIRTABLE_CONFIG.ADMIN_TABLE, rec.id, { 'Trigger Spin': false });
-
-    return true;
-  }catch(e){
-    console.error('checkSpinTrigger error', e);
-    return false;
-  }
-}
-
-        async function markWinner(participant, position) {
-            try {
-                await updateAirtableRecord(AIRTABLE_CONFIG.PARTICIPANTS_TABLE, participant.id, {
-                    Status: 'Winner'
-                });
-                console.log(`Marked ${participant.name} as winner`);
-            } catch (error) {
-                console.error('Error marking winner:', error);
-                showError('Failed to mark winner in database');
-            }
-        }
-
-        // ============================================================================
-        // UI UPDATE FUNCTIONS
-        // ============================================================================
-        
-        function createWheel(){
-  const wheel = $('#wheel');
-  wheel.empty();
-
-  if (!appState.participants.length){
-    wheel.css('background','conic-gradient(from 0deg, #1c2128, #2a3038)');
-    return;
-  }
-
-  const segmentAngle = 360 / appState.participants.length;
-  let stops = [];
-
-  appState.participants.forEach((p, i) => {
-    const start = i*segmentAngle;
-    const mid = start + segmentAngle/2;
-    const color = wheelColors[i % wheelColors.length];
-    stops.push(`${color} ${start}deg ${(i+1)*segmentAngle}deg`);
-
-    const isHighlighted = (userName && p.name===userName) || (userEmail && p.email===userEmail);
-
-    const displayName = isHighlighted ? p.name : ''; // <<< hide others
-    const numberDiv = $('<div class="wheel-number"></div>');
-    numberDiv.html(`
-      <div class="number-display ${isHighlighted?'highlighted':''}" style="--rotate:${mid}deg">${i+1}</div>
-      <div class="participant-name ${isHighlighted?'highlighted':''}" style="--rotate:${mid}deg">${displayName}</div>
-    `);
-    wheel.append(numberDiv);
-  });
-
-  wheel.css('background',`conic-gradient(from 0deg, ${stops.join(', ')})`);
-}
-
-function updateParticipantsDisplay(){
-  const grid = $('#participantsGrid');
-  const count = $('#participantCount');
-  const has = appState.participants.length;
-
-  if (!has){
-    grid.html(`<div style="grid-column:1/-1;text-align:center;color:#8a9199;padding:40px 20px;">Waiting for players to join...</div>`);
-    count.text('0');
-    return;
-  }
-
-  let html = '';
-  appState.participants.forEach((p,i)=>{
-    const isHighlighted = (userName && p.name===userName) || (userEmail && p.email===userEmail);
-    html += `
-      <div class="participant-slot ${isHighlighted?'highlighted':''}">
-        <div class="slot-number">${i+1}</div>
-        <div class="slot-name">${isHighlighted ? p.name : ''}</div>
-      </div>`;
-  });
-
-  grid.html(html);
-  count.text(has);
-}
-
-        function updateQueueDisplay() {
-            const queueSection = $('#queueSection');
-            const queueList = $('#queueList');
-            const queueCount = $('#queueCount');
-            
-            if (appState.queue.length === 0) {
-                queueSection.hide();
-            } else {
-                queueSection.show();
-                let html = '';
-                appState.queue.forEach((person, index) => {
-                    html += `
-                        <div class="queue-item">
-                            <span>${person.name}</span>
-                            <span class="queue-position">#${appState.participants.length + index + 1}</span>
-                        </div>
-                    `;
-                });
-                queueList.html(html);
-            }
-            
-            queueCount.text(appState.queue.length);
-        }
-
-        function showUserBanner() {
-            if (!appState.highlightedUser && !userEmail && !userName) return;
-            
-            const banner = $('#userBanner');
-            const userNameSpan = $('#userName');
-            const userNumberSpan = $('#userNumber');
-            
-            // Find user in participants
-            let userIndex = -1;
-            let displayName = appState.highlightedUser || userName || 'Player';
-            
-            if (userName || userEmail) {
-                userIndex = appState.participants.findIndex(p => 
-                    p.name === userName || p.email === userEmail
-                );
-            } else if (appState.highlightedUser) {
-                userIndex = appState.participants.findIndex(p => p.name === appState.highlightedUser);
-            }
-            
-            if (userIndex !== -1) {
-                userNameSpan.text(displayName);
-                userNumberSpan.text(userIndex + 1);
-                banner.addClass('show');
-            } else {
-                banner.removeClass('show');
-            }
-        }
-
-        function showWinnerAnnouncement(winner, position) {
-            const announcement = $('#winnerAnnouncement');
-            const winnerNumber = $('#winnerNumber');
-            const winnerName = $('#winnerName');
-            
-            winnerNumber.text(position);
-            winnerName.text(winner.name);
-            
-            announcement.addClass('show');
-            createConfetti();
-            
-            // Auto-hide after 10 seconds
-            setTimeout(() => {
-                announcement.removeClass('show');
-            }, 10000);
-        }
-
-        // ============================================================================
-        // WHEEL SPINNING LOGIC - ADMIN ONLY (No manual spin capability)
-        // ============================================================================
-        
-        function chooseWeightedIndex(list){
-  // sum weights
-  const total = list.reduce((s,p)=> s + (Number(p.weight)||1), 0);
-  let r = Math.random() * total;
-  for (let i=0;i<list.length;i++){
-    r -= (Number(list[i].weight)||1);
-    if (r <= 0) return i;
-  }
-  return list.length - 1; // fallback
-}
-
-let spinLockUntil = 0;        // prevents rapid/double spins
-let rotationResetDone = true; // tracks reset state between spins
-
-async function spinWheel(){
-  const now = Date.now();
-  if (appState.isSpinning || now < spinLockUntil || appState.participants.length===0) return;
-
-  appState.isSpinning = true;
-  spinLockUntil = now + 6000; // lock for > transition duration
-
-  const wheel = $('#wheel');
-  const indicator = $('#spinningIndicator');
-
-  // Hard reset transform so every spin starts from 0deg
-  rotationResetDone = false;
-  wheel.css('transition','none');
-  wheel.css('transform','rotate(0deg)');
-  // force reflow so the browser applies the reset immediately
-  void wheel[0].offsetWidth;
-  rotationResetDone = true;
-
-  // UI state
-  indicator.addClass('show');
-  $('.wheel-center').text('SPINNING');
-
-  // --- weighted winner ---
-  const winnerIndex = chooseWeightedIndex(appState.participants);
-  const winner = appState.participants[winnerIndex];
-
-  // --- compute rotation to land winner under the pointer at top (0deg) ---
-  const segmentAngle = 360 / appState.participants.length;
-  const targetAngle = winnerIndex * segmentAngle + segmentAngle/2; // center of segment
-  const spins = 8; // full rotations
-  const finalRotation = (spins*360) + (360 - targetAngle); // align winner at pointer
-
-  // run spin
-  wheel.addClass('spinning');
-  wheel.css('transition','transform 4s cubic-bezier(0.25,0.46,0.45,0.94)');
-  wheel.css('transform', `rotate(${finalRotation}deg)`);
-
-  setTimeout(async ()=>{
-    indicator.removeClass('show');
-    $('.wheel-center').text('SPIN');
-    wheel.removeClass('spinning');
-    appState.isSpinning = false;
-
-    await markWinner(winner, winnerIndex+1);
-    showWinnerAnnouncement(winner, winnerIndex+1);
-
-    setTimeout(refreshData, 1200);
-  }, 4000);
-}
-
-        // ============================================================================
-        // DATA REFRESH & POLLING
-        // ============================================================================
-        
-        async function refreshData() {
-            try {
-                console.log('Refreshing data from Airtable...');
-                
-                // Fetch participants
-                const allParticipants = await fetchParticipants();
-                
-                // Split into active participants (first 36) and queue
-                appState.participants = allParticipants.slice(0, 36);
-                appState.queue = allParticipants.slice(36);
-                
-                // Set highlighted user
-                if (userName || userEmail) {
-                    const user = allParticipants.find(p => 
-                        p.name === userName || p.email === userEmail
-                    );
-                    if (user) {
-                        appState.highlightedUser = user.name;
-                    }
-                }
-                
-                // Update UI
-                createWheel();
-                updateParticipantsDisplay();
-                updateQueueDisplay();
-                showUserBanner();
-                
-                updateConnectionStatus('connected');
-                console.log(`Updated: ${appState.participants.length} participants, ${appState.queue.length} in queue`);
-                
-            } catch (error) {
-                console.error('Error refreshing data:', error);
-                updateConnectionStatus('error');
-                showError('Failed to fetch data from Airtable');
-            }
-        }
-
-let pollBusy = false;
-async function pollForUpdates(){
-  if (pollBusy) return;
-  pollBusy = true;
-  try{
-    if (!appState.isSpinning){
-      const shouldSpin = await checkSpinTrigger();
-      if (shouldSpin){ spinWheel(); pollBusy = false; return; }
+    // ============================================
+    // AIRTABLE HELPERS
+    // ============================================
+    function updateConnectionStatus(state){
+      $('#connectionStatus').text(
+        state === 'connected' ? 'Connected' :
+        state === 'error' ? 'Connection Error' : 'Connecting...'
+      );
+      $('#statusDot').toggleClass('disconnected', state!=='connected');
     }
-    await refreshData();
-  }catch(e){ console.error(e); }
-  finally{ pollBusy = false; }
-}
 
-        // ============================================================================
-        // EVENT HANDLERS & INITIALIZATION
-        // ============================================================================
-        
-        $(document).ready(function() {
-            console.log('Avoca Royale initializing...');
-            console.log('User email:', userEmail);
-            console.log('User name:', userName);
-            console.log('Note: Manual spinning disabled - spins are admin-controlled only');
-            
-            // No manual spin capability - wheel center is display only
-            $('#wheelCenter').css('cursor', 'default');
-            
-            // Close winner announcement on click
-            $('#winnerAnnouncement').on('click', function() {
-                $(this).removeClass('show');
-            });
-            
-            // Initial data load
-            refreshData();
-            
-            // Start polling loop
-            setInterval(pollForUpdates, AIRTABLE_CONFIG.POLLING_INTERVAL);
-            
-            console.log('Avoca Royale initialized successfully');
+    async function fetchFromAirtable(tableName, params = {}){
+      try{
+        let url = `https://api.airtable.com/v0/${AIRTABLE_CONFIG.BASE_ID}/${tableName}`;
+        const sp = new URLSearchParams();
+        Object.entries(params).forEach(([k,v])=>{
+          if(k==='sort' && Array.isArray(v)){ v.forEach(o=>{ sp.append('sort[0][field]', o.field); sp.append('sort[0][direction]', o.direction); }); }
+          else if(typeof v==='string' || typeof v==='number'){ sp.append(k, v); }
         });
+        if(sp.toString()) url += `?${sp.toString()}`;
+        const res = await fetch(url, { headers:{ Authorization:`Bearer ${AIRTABLE_CONFIG.API_KEY}` }});
+        if(!res.ok) throw new Error(await res.text());
+        const data = await res.json(); return data.records || [];
+      }catch(e){ console.error(e); throw e; }
+    }
+    async function updateAirtableRecord(tableName, recordId, fields){
+      const url = `https://api.airtable.com/v0/${AIRTABLE_CONFIG.BASE_ID}/${tableName}/${recordId}`;
+      const res = await fetch(url, { method:'PATCH', headers:{ 'Authorization':`Bearer ${AIRTABLE_CONFIG.API_KEY}`, 'Content-Type':'application/json' }, body: JSON.stringify({ fields })});
+      if(!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
 
-        // ============================================================================
-        // DEBUG FUNCTIONS (for development/testing)
-        // ============================================================================
-        
-        // Expose functions to global scope for debugging
-        window.avocaDebug = {
-            refreshData,
-            spinWheel, // For testing only - normally only triggered by admin
-            showError,
-            appState,
-            AIRTABLE_CONFIG
-        };
-        
-        console.log('Debug functions available at window.avocaDebug');
-    </script>
+    async function fetchParticipants(){
+      try{
+        const records = await fetchFromAirtable(AIRTABLE_CONFIG.PARTICIPANTS_TABLE, {
+          filterByFormula: "OR({Status} = 'Active', {Status} = '')",
+          maxRecords: 100
+        });
+        const list = records.map(r=>({
+          id:r.id,
+          name:r.fields.Name || 'Anonymous',
+          email:r.fields.Email || '',
+          weight:r.fields.Weight || 1,
+          status:r.fields.Status || 'Active'
+        }));
+        list.sort((a,b)=> (b.weight||1) - (a.weight||1) || a.name.localeCompare(b.name));
+        return list;
+      }catch(e){ updateConnectionStatus('error'); return []; }
+    }
+
+    // ============================================
+    // WHEEL RENDERING
+    // ============================================
+    function wheelColorsFor(i, n){
+      const mid = Math.floor(n/2);                 // opposite wedge (00)
+      if (i === 0 || i === mid) return '#1fb36e';  // 0 and 00
+      // Alternate red/black ignoring the two greens so pattern stays even
+      const idx = i - (i > mid ? 2 : 1);
+      return (idx % 2 === 0) ? '#d83a32' : '#2b2f36';
+    }
+
+    function createWheel(){
+      const wheel = $('#wheel'); wheel.empty();
+
+      const n = appState.participants.length || 36;       // keep full ring visual if fewer
+      const segment = 360 / n;
+      const stops = [];
+
+      for (let i = 0; i < n; i++){
+        const start = i * segment;
+        const end   = (i + 1) * segment;
+        const mid   = start + segment / 2;
+
+        const p = appState.participants[i];
+        const isHighlighted = p && (norm(p.name) === userKey || norm(p.email) === userKey);
+
+        // base roulette color; override to blue if this is "your" slot
+        const base = wheelColorsFor(i, n);
+        const color = isHighlighted ? '#1976ff' : base;
+        stops.push(`${color} ${start}deg ${end}deg`);
+
+        // visible number text (use 0 / 00 for the two greens, else index)
+        const labelText = (i === 0) ? '0' : (i === Math.floor(n/2) ? '00' : String(i));
+        const label = $(`<div class="wedge-label" style="--rotate:${mid}deg;">${labelText}</div>`);
+        wheel.append(label);
+      }
+
+      wheel.css('background', `conic-gradient(${stops.join(',')})`);
+    }
+
+    function updateParticipantsDisplay(){
+      const grid = $('#participantsGrid'); const count = $('#participantCount');
+      const list = appState.participants.slice(0,36);
+
+      if(!list.length){
+        grid.html(`<div style="grid-column:1/-1; text-align:center; color:#6b7280; padding:32px 12px;">Waiting for players to join...</div>`);
+        count.text('0'); return;
+      }
+
+      let html='';
+      list.forEach((p,i)=>{
+        const isHighlighted = (norm(p.name)===userKey || norm(p.email)===userKey);
+        html += `<div class="participant-slot ${isHighlighted?'highlighted':''}">
+          <div class="slot-number">${i+1}</div>
+          <div class="slot-name">${isHighlighted ? p.name : ''}</div>
+        </div>`;
+      });
+      grid.html(html);
+      count.text(list.length);
+    }
+
+    function updateQueueDisplay(){
+      const $sec = $('#queueSection'), $list = $('#queueList'), $count = $('#queueCount');
+      if(!appState.queue.length){ $sec.hide(); } else{
+        $sec.show(); $list.empty();
+        appState.queue.forEach((p,idx)=>{
+          $list.append(`<div class="queue-item"><span>${p.name || 'Guest'}</span><span class="queue-position">#${appState.participants.length + idx + 1}</span></div>`);
+        });
+      }
+      $count.text(appState.queue.length);
+    }
+
+    // ============================================
+    // SPIN LOGIC (admin triggered)
+    // ============================================
+    function chooseWeightedIndex(list){
+      const total = list.reduce((s,p)=> s + (Number(p.weight)||1), 0);
+      let r = Math.random()*total;
+      for(let i=0;i<list.length;i++){ r -= (Number(list[i].weight)||1); if(r<=0) return i; }
+      return list.length-1;
+    }
+
+    let lastSpinIdSeen=null, spinLockUntil=0;
+    async function checkSpinTrigger(){
+      try{
+        const recs = await fetchFromAirtable(AIRTABLE_CONFIG.ADMIN_TABLE, { filterByFormula: "{Trigger Spin} = TRUE()", maxRecords:1 });
+        if(!recs.length) return false;
+        const rec = recs[0];
+        const spinId = rec.fields['Spin ID'] || rec.id;
+        if(spinId === lastSpinIdSeen || appState.isSpinning) return false;
+        lastSpinIdSeen = spinId;
+        await updateAirtableRecord(AIRTABLE_CONFIG.ADMIN_TABLE, rec.id, { 'Trigger Spin': false });
+        return true;
+      }catch(e){ console.error(e); return false; }
+    }
+
+    async function spinWheel(){
+      const now = Date.now(); if(appState.isSpinning || now<spinLockUntil || !appState.participants.length) return;
+      appState.isSpinning = true; spinLockUntil = now + 6000;
+
+      const wheel = $('#wheel');
+      wheel.css('transition','none'); wheel.css('transform','rotate(0deg)'); void wheel[0].offsetWidth;
+      wheel.css('transition','transform 4s cubic-bezier(.25,.46,.45,.94)');
+
+      const winnerIndex = chooseWeightedIndex(appState.participants);
+      const seg = 360 / (appState.participants.length || 36);
+      const target = winnerIndex * seg + seg/2;
+      const finalRotation = (8*360) + (360 - target);
+
+      wheel.css('transform', `rotate(${finalRotation}deg)`);
+
+      setTimeout(async ()=>{
+        appState.isSpinning=false;
+        const winner = appState.participants[winnerIndex];
+        try{ await updateAirtableRecord(AIRTABLE_CONFIG.PARTICIPANTS_TABLE, winner.id, { Status:'Winner' }); }catch(e){}
+        // winner modal
+        $('#winnerNumber').text(winnerIndex+1);
+        $('#winnerName').text(winner.name || 'Winner');
+        $('#winnerAnnouncement').addClass('show');
+        setTimeout(()=>$('#winnerAnnouncement').removeClass('show'), 8000);
+        setTimeout(refreshData, 1000);
+      }, 4000);
+    }
+
+    // ============================================
+    // REFRESH & POLLING
+    // ============================================
+    async function refreshData(){
+      try{
+        const all = await fetchParticipants();
+        appState.participants = all.slice(0,36);
+        appState.queue        = all.slice(36);
+        createWheel();
+        updateParticipantsDisplay();
+        updateQueueDisplay();
+        updateConnectionStatus('connected');
+      }catch(e){ updateConnectionStatus('error'); }
+    }
+
+    let pollBusy=false;
+    async function pollForUpdates(){
+      if(pollBusy) return; pollBusy = true;
+      try{
+        if(!appState.isSpinning){ const t = await checkSpinTrigger(); if(t){ await spinWheel(); pollBusy=false; return; } }
+        await refreshData();
+      }finally{ pollBusy=false; }
+    }
+
+    // ============================================
+    // INIT
+    // ============================================
+    $(document).ready(function(){
+      refreshData();
+      setInterval(pollForUpdates, AIRTABLE_CONFIG.POLLING_INTERVAL);
+    });
+  </script>
 </body>
 </html>
