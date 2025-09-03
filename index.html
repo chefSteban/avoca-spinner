@@ -1,8 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Avoca Royal</title>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
@@ -126,17 +124,29 @@
 
     /* Centered numeric labels on wedges */
     #wheel{ --r: calc(var(--wheel-size) * 0.42); }
-    .wedge-label{
-      position:absolute; top:50%; left:50%;
-      transform: rotate(var(--rotate)) translateX(var(--r)) rotate(calc(-1 * var(--rotate)));
-      transform-origin: center;
-      font-weight: 800;
-      font-size: clamp(12px, 2.6vw, 18px);
-      letter-spacing: .02em;
-      color: #fff;
-      text-shadow: 0 1px 0 #0006, 0 0 6px #0006;
-      user-select: none;
-    }
+
+/* Centered numeric labels on wedges */
+#wheel{ --r: calc(var(--wheel-size) * 0.42); --label-offset: 0deg; }
+
+.wedge-label{
+  position:absolute; top:50%; left:50%;
+  transform:
+    rotate(calc(var(--rotate) + var(--label-offset)))
+    translateX(var(--r))
+    rotate(calc(-1 * var(--rotate) - var(--label-offset)))
+    /* rotate(15deg)  <-- leave commented if you don't want tilted digits */
+    translate(-50%, -50%);
+  transform-origin: center;
+  /* …rest unchanged… */
+
+  font-weight: 800;
+  font-size: clamp(12px, 2.6vw, 18px);
+  letter-spacing: .02em;
+  color: #fff !important;     /* <-- force white text */
+  text-shadow: 0 1px 0 #0006, 0 0 6px #0006; /* glow for contrast */
+  user-select: none;
+  pointer-events: none;
+}
 
     /* Right side – players card */
     .info-panels{ display: grid; gap: 20px; }
@@ -219,13 +229,11 @@
   <!-- Header image that always matches wheel size -->
   <div class="header">
     <div class="hero-wrap">
-      <img
-        src="https://cdn.prod.website-files.com/681cf5f5bab419a4de9e6b73/68b274980ed7ce663f8b20c3_Frame%201533216873.png"
-        alt="AVOCA ROYAL — Don’t gamble on your business" />
+      <img src="https://cdn.prod.website-files.com/681cf5f5bab419a4de9e6b73/68b274980ed7ce663f8b20c3_Frame%201533216873.png" alt="AVOCA ROYAL — Don’t gamble on your business">
     </div>
     <div class="status-indicator" title="Connection">
       <div class="status-dot" id="statusDot"></div>
-      <span id="connectionStatus">Connecting...</span>
+      <span id="connectionStatus">Connected</span>
     </div>
   </div>
 
@@ -240,10 +248,10 @@
           <!-- Center hub with AVOCA mark -->
           <div class="wheel-center" aria-label="Avoca Logo">
             <svg viewBox="0 0 129 127" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path d="M67.0111 30.1676L66.1747 30.1033C48.5039 29.3098 30.9188 26.3504 13.9128 21.3108C20.1748 28.4092 37.9743 49.4468 47.882 70.2701L48.1179 70.7634C55.6451 85.5605 61.4997 101.194 65.4027 117.407C69.1985 106.448 77.8194 83.7591 89.5285 66.6458L90.0003 65.9382C99.2432 51.3984 110.202 37.9521 122.726 26.0072C111.21 28.1517 87.4912 31.8188 67.0325 30.1676H67.0111Z" fill="#1C2128"/>
-              <path d="M89.872 76.0389C80.7363 91.3079 73.9168 109.15 70.4641 119.165L69.1774 122.875C70.9359 126.671 75.9326 127.936 79.2352 125.041C85.9689 119.187 92.6813 113.332 99.4151 107.456C101.281 105.826 102.053 103.296 101.409 100.915C98.7074 90.8576 96.0053 80.7998 93.3032 70.742L89.8934 76.1033L89.8505 76.0389H89.872Z" fill="#1C2128"/>
-              <path d="M5.69941 20.1102C2.13951 20.5391 -0.626909 23.9274 0.123672 27.7661C1.83929 36.5158 3.5549 45.2868 5.24907 54.0365C5.72086 56.4598 7.5437 58.4113 9.92412 59.0332C20.0248 61.7353 30.1469 64.4375 40.2476 67.1396C30.1684 48.4608 14.7064 30.3181 9.88123 24.8281L5.69941 20.0888V20.1102Z" fill="#1C2128"/>
-              <path d="M75.3532 25.1931C92.8739 25.4934 111.445 22.6411 121.718 20.7325L126.736 19.8104C129.609 16.4006 128.258 11.0607 123.926 9.581C115.499 6.6859 107.049 3.79082 98.6212 0.895726C96.2837 0.102254 93.6888 0.702656 91.9517 2.43972C84.4888 9.92408 77.0045 17.387 69.5415 24.8714L75.4175 25.1287L75.3746 25.2145L75.3532 25.1931Z" fill="#1C2128"/>
+              <path d="M67.0111 30.1676L66.1747 30.1033C48.5039 29.3098 30.9188 26.3504 13.9128 21.3108C20.1748 28.4092 37.9743 49.4468 47.882 70.2701L48.1179 70.7634C55.6451 85.5605 61.4997 101.194 65.4027 117.407C69.1985 106.448 77.8194 83.7591 89.5285 66.6458L90.0003 65.9382C99.2432 51.3984 110.202 37.9521 122.726 26.0072C111.21 28.1517 87.4912 31.8188 67.0325 30.1676H67.0111Z" fill="#1C2128"></path>
+              <path d="M89.872 76.0389C80.7363 91.3079 73.9168 109.15 70.4641 119.165L69.1774 122.875C70.9359 126.671 75.9326 127.936 79.2352 125.041C85.9689 119.187 92.6813 113.332 99.4151 107.456C101.281 105.826 102.053 103.296 101.409 100.915C98.7074 90.8576 96.0053 80.7998 93.3032 70.742L89.8934 76.1033L89.8505 76.0389H89.872Z" fill="#1C2128"></path>
+              <path d="M5.69941 20.1102C2.13951 20.5391 -0.626909 23.9274 0.123672 27.7661C1.83929 36.5158 3.5549 45.2868 5.24907 54.0365C5.72086 56.4598 7.5437 58.4113 9.92412 59.0332C20.0248 61.7353 30.1469 64.4375 40.2476 67.1396C30.1684 48.4608 14.7064 30.3181 9.88123 24.8281L5.69941 20.0888V20.1102Z" fill="#1C2128"></path>
+              <path d="M75.3532 25.1931C92.8739 25.4934 111.445 22.6411 121.718 20.7325L126.736 19.8104C129.609 16.4006 128.258 11.0607 123.926 9.581C115.499 6.6859 107.049 3.79082 98.6212 0.895726C96.2837 0.102254 93.6888 0.702656 91.9517 2.43972C84.4888 9.92408 77.0045 17.387 69.5415 24.8714L75.4175 25.1287L75.3746 25.2145L75.3532 25.1931Z" fill="#1C2128"></path>
             </svg>
           </div>
         </div>
@@ -253,12 +261,41 @@
     <!-- RIGHT: PLAYERS -->
     <div class="info-panels">
       <div class="panel">
-        <h2>Players (<span id="participantCount">0</span>/36)</h2>
-        <div class="participants-grid" id="participantsGrid">
-          <div style="grid-column:1 / -1; text-align:center; color:#6b7280; padding:32px 12px;">
-            Waiting for players to join...
-          </div>
-        </div>
+        <h2>Players (<span id="participantCount">11</span>/36)</h2>
+        <div class="participants-grid" id="participantsGrid"><div class="participant-slot ">
+          <div class="slot-number">1</div>
+          <div class="slot-name"></div>
+        </div><div class="participant-slot ">
+          <div class="slot-number">2</div>
+          <div class="slot-name"></div>
+        </div><div class="participant-slot ">
+          <div class="slot-number">3</div>
+          <div class="slot-name"></div>
+        </div><div class="participant-slot ">
+          <div class="slot-number">4</div>
+          <div class="slot-name"></div>
+        </div><div class="participant-slot ">
+          <div class="slot-number">5</div>
+          <div class="slot-name"></div>
+        </div><div class="participant-slot ">
+          <div class="slot-number">6</div>
+          <div class="slot-name"></div>
+        </div><div class="participant-slot ">
+          <div class="slot-number">7</div>
+          <div class="slot-name"></div>
+        </div><div class="participant-slot ">
+          <div class="slot-number">8</div>
+          <div class="slot-name"></div>
+        </div><div class="participant-slot ">
+          <div class="slot-number">9</div>
+          <div class="slot-name"></div>
+        </div><div class="participant-slot ">
+          <div class="slot-number">10</div>
+          <div class="slot-name"></div>
+        </div><div class="participant-slot ">
+          <div class="slot-number">11</div>
+          <div class="slot-name"></div>
+        </div></div>
 
         <div class="queue-section" id="queueSection" style="display:none;">
           <h3 style="font-size:18px; margin:14px 0 10px;">Waitlist (<span id="queueCount">0</span>)</h3>
@@ -272,12 +309,19 @@
   <div class="winner-announcement" id="winnerAnnouncement">
     <div class="winner-card">
       <div class="winner-text">Winner</div>
-      <div class="winner-number" id="winnerNumber">00</div>
-      <div class="winner-name" id="winnerName"></div>
+      <div class="winner-number" id="winnerNumber">1</div>
+      <div class="winner-name" id="winnerName">Fede C</div>
     </div>
   </div>
 
   <script>
+
+//     function labelForIndex(i, n) {
+//   const mid = Math.floor(n / 2);
+//   if (i === 0) return '0';
+//   if (i === mid) return '00';
+//   return String(i); // 1,2,3,… skipping 0 and 00 positions
+// }
     // ============================================
     // CONFIG
     // ============================================
@@ -349,46 +393,48 @@
         return list;
       }catch(e){ updateConnectionStatus('error'); return []; }
     }
+// ============================================
+// WHEEL RENDERING
+// ============================================
+// function wheelColorsFor(i, n) {
+//   const mid = Math.floor(n / 2);       // opposite of 0
+//   if (i === 0 || i === mid) return '#1fb36e';   // green for 0 and 00
+//   const idx = i - (i > mid ? 2 : 1);            // keep alternation even-ish
+//   return (idx % 2 === 0) ? '#d83a32' : '#2b2f36'; // red / black
+// }
 
-    // ============================================
-    // WHEEL RENDERING
-    // ============================================
-    function wheelColorsFor(i, n){
-      const mid = Math.floor(n/2);                 // opposite wedge (00)
-      if (i === 0 || i === mid) return '#1fb36e';  // 0 and 00
-      // Alternate red/black ignoring the two greens so pattern stays even
-      const idx = i - (i > mid ? 2 : 1);
-      return (idx % 2 === 0) ? '#d83a32' : '#2b2f36';
-    }
+// ============================================
+// WHEEL RENDERING (no 0/00, no green)
+// ============================================
+function createWheel() {
+  const wheel = $('#wheel');
+  wheel.empty();
 
-    function createWheel(){
-      const wheel = $('#wheel'); wheel.empty();
+  const n   = appState.participants.length || 36;
+  const seg = 360 / n;
+  const stops = [];
 
-      const n = appState.participants.length || 36;       // keep full ring visual if fewer
-      const segment = 360 / n;
-      const stops = [];
+  for (let i = 0; i < n; i++) {
+    const start = i * seg;
+    const end   = (i + 1) * seg;
+    const midA  = start + seg / 2;
 
-      for (let i = 0; i < n; i++){
-        const start = i * segment;
-        const end   = (i + 1) * segment;
-        const mid   = start + segment / 2;
+    // alternate red / black only
+    const baseColor = (i % 2 === 0) ? '#d83a32' : '#2b2f36';
 
-        const p = appState.participants[i];
-        const isHighlighted = p && (norm(p.name) === userKey || norm(p.email) === userKey);
+    // blue highlight if it's "your" slot
+    const p = appState.participants[i];
+    const isHighlighted = p && (norm(p.name) === userKey || norm(p.email) === userKey);
+    const color = isHighlighted ? '#1976ff' : baseColor;
+    stops.push(`${color} ${start}deg ${end}deg`);
 
-        // base roulette color; override to blue if this is "your" slot
-        const base = wheelColorsFor(i, n);
-        const color = isHighlighted ? '#1976ff' : base;
-        stops.push(`${color} ${start}deg ${end}deg`);
+    // labels go 1..N
+    const label = $(`<div class="wedge-label" style="--rotate:${midA}deg;">${i + 1}</div>`);
+    wheel.append(label);
+  }
 
-        // visible number text (use 0 / 00 for the two greens, else index)
-        const labelText = (i === 0) ? '0' : (i === Math.floor(n/2) ? '00' : String(i));
-        const label = $(`<div class="wedge-label" style="--rotate:${mid}deg;">${labelText}</div>`);
-        wheel.append(label);
-      }
-
-      wheel.css('background', `conic-gradient(${stops.join(',')})`);
-    }
+  wheel.css('background', `conic-gradient(${stops.join(',')})`);
+}
 
     function updateParticipantsDisplay(){
       const grid = $('#participantsGrid'); const count = $('#participantCount');
@@ -403,7 +449,7 @@
       list.forEach((p,i)=>{
         const isHighlighted = (norm(p.name)===userKey || norm(p.email)===userKey);
         html += `<div class="participant-slot ${isHighlighted?'highlighted':''}">
-          <div class="slot-number">${i+1}</div>
+          <div class="slot-number">${i + 1}</div>
           <div class="slot-name">${isHighlighted ? p.name : ''}</div>
         </div>`;
       });
@@ -477,17 +523,19 @@
     // ============================================
     // REFRESH & POLLING
     // ============================================
-    async function refreshData(){
-      try{
-        const all = await fetchParticipants();
-        appState.participants = all.slice(0,36);
-        appState.queue        = all.slice(36);
-        createWheel();
-        updateParticipantsDisplay();
-        updateQueueDisplay();
-        updateConnectionStatus('connected');
-      }catch(e){ updateConnectionStatus('error'); }
-    }
+     async function refreshData(){
+  try{
+    const all = await fetchParticipants();
+    appState.participants = all.slice(0,36);
+    appState.queue        = all.slice(36);
+    createWheel();
+    updateParticipantsDisplay();
+    updateQueueDisplay();
+    updateConnectionStatus('connected');
+  }catch(e){
+    updateConnectionStatus('error');
+  }
+}
 
     let pollBusy=false;
     async function pollForUpdates(){
@@ -505,6 +553,9 @@
       refreshData();
       setInterval(pollForUpdates, AIRTABLE_CONFIG.POLLING_INTERVAL);
     });
+
+  
   </script>
-</body>
-</html>
+
+
+</body></html>
