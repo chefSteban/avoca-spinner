@@ -316,6 +316,7 @@
 
   <script>
 
+
 //     function labelForIndex(i, n) {
 //   const mid = Math.floor(n / 2);
 //   if (i === 0) return '0';
@@ -336,7 +337,7 @@
     // ============================================
     // STATE & URL PARAMS
     // ============================================
-    let appState = { participants:[], queue:[], isSpinning:false };
+    let appState = { participants: [], queue: [], isSpinning: false, highlightIndex: -1 };
 
     const urlParams = new URLSearchParams(window.location.search);
     const norm = s => (s || "").toString().trim().toLowerCase();
@@ -406,55 +407,50 @@
 // ============================================
 // WHEEL RENDERING (no 0/00, no green)
 // ============================================
-function createWheel() {
-  const wheel = $('#wheel');
-  wheel.empty();
-
-  const n   = appState.participants.length || 36;
+function createWheel(){
+  const wheel = $('#wheel'); wheel.empty();
+  const n = appState.participants.length || 36;
   const seg = 360 / n;
   const stops = [];
 
-  for (let i = 0; i < n; i++) {
-    const start = i * seg;
-    const end   = (i + 1) * seg;
-    const midA  = start + seg / 2;
+  for (let i = 0; i < n; i++){
+    const start = i * seg, end = (i+1)*seg, midA = start + seg/2;
 
-    // alternate red / black only
+    // alternating colors
     const baseColor = (i % 2 === 0) ? '#d83a32' : '#2b2f36';
 
-    // blue highlight if it's "your" slot
+    // ✅ one source of truth
     const isHighlighted = (i === appState.highlightIndex);
     const color = isHighlighted ? '#1976ff' : baseColor;
     stops.push(`${color} ${start}deg ${end}deg`);
 
-    // labels go 1..N
-    const label = $(`<div class="wedge-label" style="--rotate:${midA}deg;">${i + 1}</div>`);
+    const label = $(`<div class="wedge-label" style="--rotate:${midA}deg;">${i+1}</div>`);
     wheel.append(label);
   }
 
   wheel.css('background', `conic-gradient(${stops.join(',')})`);
 }
 
-    function updateParticipantsDisplay(){
-      const grid = $('#participantsGrid'); const count = $('#participantCount');
-      const list = appState.participants.slice(0,36);
+      function updateParticipantsDisplay(){
+        const grid = $('#participantsGrid'); const count = $('#participantCount');
+        const list = appState.participants.slice(0,36);
 
-      if(!list.length){
-        grid.html(`<div style="grid-column:1/-1; text-align:center; color:#6b7280; padding:32px 12px;">Waiting for players to join...</div>`);
-        count.text('0'); return;
+        if(!list.length){
+          grid.html(`<div style="grid-column:1/-1; text-align:center; color:#6b7280; padding:32px 12px;">Waiting for players to join...</div>`);
+          count.text('0'); return;
+        }
+
+        let html = '';
+        list.forEach((p,i)=>{
+          const isHighlighted = (i === appState.highlightIndex);   // ✅ same index
+          html += `<div class="participant-slot ${isHighlighted?'highlighted':''}">
+            <div class="slot-number">${i+1}</div>
+            <div class="slot-name">${isHighlighted ? (p.name || '') : ''}</div>
+          </div>`;
+        });
+        grid.html(html);
+        count.text(list.length);
       }
-
-      let html='';
-      list.forEach((p,i)=>{
-        const isHighlighted = (i === appState.highlightIndex);
-        html += `<div class="participant-slot ${isHighlighted?'highlighted':''}">
-          <div class="slot-number">${i + 1}</div>
-          <div class="slot-name">${isHighlighted ? p.name : ''}</div>
-        </div>`;
-      });
-      grid.html(html);
-      count.text(list.length);
-    }
 
     function updateQueueDisplay(){
       const $sec = $('#queueSection'), $list = $('#queueList'), $count = $('#queueCount');
@@ -539,12 +535,11 @@ async function refreshData(){
   try{
     const all  = await fetchParticipants();
     const list = all.slice(0, 36);
+    appState.participants = list;
+    appState.queue        = all.slice(36);
 
-    appState.participants   = list;
-    appState.queue          = all.slice(36);
-
-    // 🔹 compute highlight index ONCE
-    const key = userKey; // already normalized at top
+    // compute highlight ONCE from the same list used by both wheel & grid
+    const key = userKey; // already normalized above
     appState.highlightIndex = list.findIndex(p =>
       norm(p.name) === key || norm(p.email) === key
     ); // -1 if not found
