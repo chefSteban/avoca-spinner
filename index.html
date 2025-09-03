@@ -479,18 +479,31 @@ function createWheel() {
     }
 
     let lastSpinIdSeen=null, spinLockUntil=0;
-    async function checkSpinTrigger(){
-      try{
-        const recs = await fetchFromAirtable(AIRTABLE_CONFIG.ADMIN_TABLE, { filterByFormula: "{Trigger Spin} = TRUE()", maxRecords:1 });
-        if(!recs.length) return false;
-        const rec = recs[0];
-        const spinId = rec.fields['Spin ID'] || rec.id;
-        if(spinId === lastSpinIdSeen || appState.isSpinning) return false;
-        lastSpinIdSeen = spinId;
-        await updateAirtableRecord(AIRTABLE_CONFIG.ADMIN_TABLE, rec.id, { 'Trigger Spin': false });
-        return true;
-      }catch(e){ console.error(e); return false; }
-    }
+// Replace your current checkSpinTrigger with this:
+async function checkSpinTrigger() {
+  try {
+    // Look for a row where "Trigger Spin" is TRUE
+    const recs = await fetchFromAirtable(AIRTABLE_CONFIG.ADMIN_TABLE, {
+      filterByFormula: "{Trigger Spin} = TRUE()",
+      maxRecords: 1
+    });
+    if (!recs.length || appState.isSpinning) return false;
+
+    const rec = recs[0];
+
+    // Immediately clear the toggle so we only react once per click
+    await updateAirtableRecord(AIRTABLE_CONFIG.ADMIN_TABLE, rec.id, {
+      "Trigger Spin": false
+      // Optionally bump Spin ID if you use it elsewhere:
+      // "Spin ID": Date.now().toString()
+    });
+
+    return true;
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+}
 
     async function spinWheel(){
       const now = Date.now(); if(appState.isSpinning || now<spinLockUntil || !appState.participants.length) return;
@@ -507,24 +520,18 @@ function createWheel() {
 
       wheel.css('transform', `rotate(${finalRotation}deg)`);
 
-setTimeout(async ()=>{
-  appState.isSpinning=false;
-  const winner = appState.participants[winnerIndex];
-  try{ await updateAirtableRecord(AIRTABLE_CONFIG.PARTICIPANTS_TABLE, winner.id, { Status:'Winner' }); }catch(e){}
-  // winner modal
-  $('#winnerNumber').text(winnerIndex+1);
-  $('#winnerName').text(winner.name || 'Winner');
-  $('#winnerAnnouncement').addClass('show');
-  setTimeout(()=>$('#winnerAnnouncement').removeClass('show'), 8000);
-  setTimeout(refreshData, 1000);
-
-  // 🔑 Reset wheel transform
-  setTimeout(() => {
-    wheel.css('transition','none');
-    wheel.css('transform','rotate(0deg)');
-  }, 500);
-
-}, 4000);
+      setTimeout(async ()=>{
+        appState.isSpinning=false;
+        const winner = appState.participants[winnerIndex];
+        try{ await updateAirtableRecord(AIRTABLE_CONFIG.PARTICIPANTS_TABLE, winner.id, { Status:'Winner' }); }catch(e){}
+        // winner modal
+        $('#winnerNumber').text(winnerIndex+1);
+        $('#winnerName').text(winner.name || 'Winner');
+        $('#winnerAnnouncement').addClass('show');
+        setTimeout(()=>$('#winnerAnnouncement').removeClass('show'), 8000);
+        setTimeout(refreshData, 1000);
+      }, 4000);
+    }
 
     // ============================================
     // REFRESH & POLLING
