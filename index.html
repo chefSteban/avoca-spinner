@@ -423,8 +423,7 @@ function createWheel() {
     const baseColor = (i % 2 === 0) ? '#d83a32' : '#2b2f36';
 
     // blue highlight if it's "your" slot
-    const p = appState.participants[i];
-    const isHighlighted = p && (norm(p.name) === userKey || norm(p.email) === userKey);
+    const isHighlighted = (i === appState.highlightIndex);
     const color = isHighlighted ? '#1976ff' : baseColor;
     stops.push(`${color} ${start}deg ${end}deg`);
 
@@ -447,7 +446,7 @@ function createWheel() {
 
       let html='';
       list.forEach((p,i)=>{
-        const isHighlighted = (norm(p.name)===userKey || norm(p.email)===userKey);
+        const isHighlighted = (i === appState.highlightIndex);
         html += `<div class="participant-slot ${isHighlighted?'highlighted':''}">
           <div class="slot-number">${i + 1}</div>
           <div class="slot-name">${isHighlighted ? p.name : ''}</div>
@@ -536,11 +535,20 @@ async function checkSpinTrigger() {
     // ============================================
     // REFRESH & POLLING
     // ============================================
-     async function refreshData(){
+async function refreshData(){
   try{
-    const all = await fetchParticipants();
-    appState.participants = all.slice(0,36);
-    appState.queue        = all.slice(36);
+    const all  = await fetchParticipants();
+    const list = all.slice(0, 36);
+
+    appState.participants   = list;
+    appState.queue          = all.slice(36);
+
+    // 🔹 compute highlight index ONCE
+    const key = userKey; // already normalized at top
+    appState.highlightIndex = list.findIndex(p =>
+      norm(p.name) === key || norm(p.email) === key
+    ); // -1 if not found
+
     createWheel();
     updateParticipantsDisplay();
     updateQueueDisplay();
