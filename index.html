@@ -126,27 +126,28 @@
     #wheel{ --r: calc(var(--wheel-size) * 0.42); }
 
 /* Centered numeric labels on wedges */
-#wheel{
+#wheel {
   --r: calc(var(--wheel-size) * 0.418);
-  --label-global: 0deg;   /* << shift all numbers 90° CCW */
-  --label-fine: 0deg;       /* optional tiny nudge later, e.g., -0.4deg */
+  --label-offset: 0deg;   /* optional fine-tune only */
 }
 
-.wedge-label{
-  position:absolute; top:50%; left:50%;
-  opacity: 0%;
+.wedge-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
   transform:
-    rotate(calc(var(--rotate) + var(--label-global) + var(--label-fine)))
+    rotate(calc(var(--rotate) + var(--label-offset)))
     translateX(var(--r))
-    rotate(calc(-1 * (var(--rotate) + var(--label-global) + var(--label-fine))))
+    rotate(calc(-1 * var(--rotate) - var(--label-offset)))
     translate(-50%, -50%);
-  transform-origin:center;
+  transform-origin: center;
+  opacity: 0%;
 
   font-weight: 800;
   font-size: clamp(12px, 2.6vw, 18px);
-  letter-spacing: .02em;
-  color: #fff !important;     /* <-- force white text */
-  text-shadow: 0 1px 0 #0006, 0 0 6px #0006; /* glow for contrast */
+  font-variant-numeric: tabular-nums;
+  color: #fff !important;
+  text-shadow: 0 0 2px #000, 0 0 6px #000, 0 1px 2px #000;
   user-select: none;
   pointer-events: none;
 }
