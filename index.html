@@ -507,18 +507,24 @@ function createWheel() {
 
       wheel.css('transform', `rotate(${finalRotation}deg)`);
 
-      setTimeout(async ()=>{
-        appState.isSpinning=false;
-        const winner = appState.participants[winnerIndex];
-        try{ await updateAirtableRecord(AIRTABLE_CONFIG.PARTICIPANTS_TABLE, winner.id, { Status:'Winner' }); }catch(e){}
-        // winner modal
-        $('#winnerNumber').text(winnerIndex+1);
-        $('#winnerName').text(winner.name || 'Winner');
-        $('#winnerAnnouncement').addClass('show');
-        setTimeout(()=>$('#winnerAnnouncement').removeClass('show'), 8000);
-        setTimeout(refreshData, 1000);
-      }, 4000);
-    }
+setTimeout(async ()=>{
+  appState.isSpinning=false;
+  const winner = appState.participants[winnerIndex];
+  try{ await updateAirtableRecord(AIRTABLE_CONFIG.PARTICIPANTS_TABLE, winner.id, { Status:'Winner' }); }catch(e){}
+  // winner modal
+  $('#winnerNumber').text(winnerIndex+1);
+  $('#winnerName').text(winner.name || 'Winner');
+  $('#winnerAnnouncement').addClass('show');
+  setTimeout(()=>$('#winnerAnnouncement').removeClass('show'), 8000);
+  setTimeout(refreshData, 1000);
+
+  // 🔑 Reset wheel transform
+  setTimeout(() => {
+    wheel.css('transition','none');
+    wheel.css('transform','rotate(0deg)');
+  }, 500);
+
+}, 4000);
 
     // ============================================
     // REFRESH & POLLING
