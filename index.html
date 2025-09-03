@@ -126,18 +126,20 @@
     #wheel{ --r: calc(var(--wheel-size) * 0.42); }
 
 /* Centered numeric labels on wedges */
-#wheel{ --r: calc(var(--wheel-size) * 0.42); --label-offset: 0deg; }
+#wheel{
+  --r: calc(var(--wheel-size) * 0.418);
+  --label-global: -90deg;   /* << shift all numbers 90° CCW */
+  --label-fine: 0deg;       /* optional tiny nudge later, e.g., -0.4deg */
+}
 
 .wedge-label{
   position:absolute; top:50%; left:50%;
   transform:
-    rotate(calc(var(--rotate) + var(--label-offset)))
+    rotate(calc(var(--rotate) + var(--label-global) + var(--label-fine)))
     translateX(var(--r))
-    rotate(calc(-1 * var(--rotate) - var(--label-offset)))
-    /* rotate(15deg)  <-- leave commented if you don't want tilted digits */
+    rotate(calc(-1 * (var(--rotate) + var(--label-global) + var(--label-fine))))
     translate(-50%, -50%);
-  transform-origin: center;
-  /* …rest unchanged… */
+  transform-origin:center;
 
   font-weight: 800;
   font-size: clamp(12px, 2.6vw, 18px);
