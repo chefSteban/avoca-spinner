@@ -509,9 +509,18 @@ async function checkSpinTrigger() {
       wheel.css('transition','transform 4s cubic-bezier(.25,.46,.45,.94)');
 
       const winnerIndex = chooseWeightedIndex(appState.participants);
-      const seg = 360 / (appState.participants.length || 36);
+      const n = appState.participants.length || 36;
+      const seg = 360 / n;
       const target = winnerIndex * seg + seg/2;
-      const finalRotation = (8*360) + (360 - target);
+      const POINTER_OFFSET = 90; // pointer at 12 o’clock
+      const finalRotation = (8*360) + (POINTER_OFFSET - target);
+
+      console.groupCollapsed('[spinWheel]');
+      console.log('n:', n, 'seg:', seg);
+      console.log('winnerIndex:', winnerIndex, 'winner label:', winnerIndex+1);
+      console.log('target(mid deg):', target.toFixed(2));
+      console.log('finalRotation:', finalRotation.toFixed(2), 'mod360:', ((finalRotation%360)+360)%360);
+      console.groupEnd();
 
       wheel.css('transform', `rotate(${finalRotation}deg)`);
 
@@ -538,11 +547,15 @@ async function refreshData(){
     appState.participants = list;
     appState.queue        = all.slice(36);
 
-    // compute highlight ONCE from the same list used by both wheel & grid
-    const key = userKey; // already normalized above
+    const key = userKey;
     appState.highlightIndex = list.findIndex(p =>
       norm(p.name) === key || norm(p.email) === key
-    ); // -1 if not found
+    );
+
+    console.groupCollapsed('[refreshData]');
+    console.log('participants:', list.map((p,i)=> `${i+1}:${p.name||''}`));
+    console.log('highlightIndex:', appState.highlightIndex, 'label:', appState.highlightIndex>=0 ? appState.highlightIndex+1 : 'n/a');
+    console.groupEnd();
 
     createWheel();
     updateParticipantsDisplay();
