@@ -333,6 +333,8 @@
       POLLING_INTERVAL: 500
     };
 
+   
+
     // ============================================
     // STATE & URL PARAMS
     // ============================================
@@ -397,47 +399,53 @@
 // ============================================
 // FIXED WHEEL RENDERING
 // ============================================
-function createWheel(){
-  const wheel = $('#wheel'); 
+
+ // Put these near the top of your script so you can tweak live in console
+window.LABEL_NUDGE_DEG0 = 0;      // constant offset (deg), usually 0
+window.LABEL_NUDGE_FRAC = -0.08;  // fraction of slice width (negative = CCW)
+
+// tweakable label-centering knobs (you can adjust live in Console)
+window.LABEL_NUDGE_DEG0 = 0;     // constant offset in degrees (negative = CCW)
+window.LABEL_NUDGE_FRAC = -0.08; // fraction of slice width (negative = CCW)
+
+function createWheel() {
+  const wheel = $('#wheel');
   wheel.empty();
-  const n = appState.participants.length || 36;
+
+  const n = appState.participants.length;         // same n as grid
+  if (!n) return;
+
   const seg = 360 / n;
+  const startOffset = -seg / 2;                   // center each slice around its index
+  const nudge = (window.LABEL_NUDGE_DEG0 || 0) + (window.LABEL_NUDGE_FRAC || 0) * seg;
+
   const stops = [];
 
-  // CRITICAL FIX: Start from -seg/2 so that the first slice (index 0) 
-  // is centered at 0° (where the pointer points)
-  const startOffset = -seg / 2;
-
-  for (let i = 0; i < n; i++){
-    // Adjust slice positioning
+  for (let i = 0; i < n; i++) {
+    // slice geometry
     const start = startOffset + i * seg;
-    const end = startOffset + (i + 1) * seg;
-    const midAngle = -90 + (startOffset + i*seg + seg/2);
+    const end   = startOffset + (i + 1) * seg;
 
-    // Alternating colors
-    const baseColor = (i % 2 === 0) ? '#d83a32' : '#2b2f36';
+    // label angle: base to 12 o’clock (-90) + center of slice + adaptive nudge
+    const midAngle = -90 + (startOffset + i * seg + seg / 2) + nudge;
+
+    // alternating colors + optional highlight
+    const baseColor    = (i % 2 === 0) ? '#d83a32' : '#2b2f36';
     const isHighlighted = (i === appState.highlightIndex);
     const color = isHighlighted ? '#1976ff' : baseColor;
-    
+
     stops.push(`${color} ${start}deg ${end}deg`);
 
-    // Create label with corrected positioning
-    const label = $(`<div class="wedge-label" style="--rotate:${midAngle}deg;">${i+1}</div>`);
+    // label (number matches grid: i+1)
+    const label = $(
+      `<div class="wedge-label" style="--rotate:${midAngle}deg;">${i + 1}</div>`
+    );
     wheel.append(label);
   }
 
+  // shift the entire pie so 0° is at 12 o’clock (matches pointer)
   wheel.css('background', `conic-gradient(from -90deg, ${stops.join(',')})`);
-  
-  /* Debug logging
-  console.groupCollapsed('[createWheel] Layout Debug');
-  console.log('n:', n, 'seg:', seg.toFixed(2), 'startOffset:', startOffset.toFixed(2));
-  console.log('First slice: start=', startOffset.toFixed(2), 'mid=', (startOffset + seg/2).toFixed(2), 'end=', (startOffset + seg).toFixed(2));
-  if (appState.highlightIndex >= 0) {
-    const hMid = startOffset + appState.highlightIndex * seg + seg/2;
-    console.log(`Highlighted slice ${appState.highlightIndex + 1}: midAngle=${hMid.toFixed(2)}°`);
-  }
-  console.groupEnd();*/
-} 
+}
 
       function updateParticipantsDisplay(){
         const grid = $('#participantsGrid'); const count = $('#participantCount');
