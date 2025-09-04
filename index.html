@@ -412,7 +412,7 @@ function createWheel(){
     // Adjust slice positioning
     const start = startOffset + i * seg;
     const end = startOffset + (i + 1) * seg;
-    const midAngle = startOffset + i * seg + seg / 2;
+    const midAngle = -90 + (startOffset + i*seg + seg/2);
 
     // Alternating colors
     const baseColor = (i % 2 === 0) ? '#d83a32' : '#2b2f36';
@@ -426,9 +426,9 @@ function createWheel(){
     wheel.append(label);
   }
 
-  wheel.css('background', `conic-gradient(${stops.join(',')})`);
+  wheel.css('background', `conic-gradient(from -90deg, ${stops.join(',')})`);
   
-  // Debug logging
+  /* Debug logging
   console.groupCollapsed('[createWheel] Layout Debug');
   console.log('n:', n, 'seg:', seg.toFixed(2), 'startOffset:', startOffset.toFixed(2));
   console.log('First slice: start=', startOffset.toFixed(2), 'mid=', (startOffset + seg/2).toFixed(2), 'end=', (startOffset + seg).toFixed(2));
@@ -436,8 +436,8 @@ function createWheel(){
     const hMid = startOffset + appState.highlightIndex * seg + seg/2;
     console.log(`Highlighted slice ${appState.highlightIndex + 1}: midAngle=${hMid.toFixed(2)}°`);
   }
-  console.groupEnd();
-}
+  console.groupEnd();*/
+} 
 
       function updateParticipantsDisplay(){
         const grid = $('#participantsGrid'); const count = $('#participantCount');
@@ -575,10 +575,14 @@ async function refreshData(){
       norm(p.name) === key || norm(p.email) === key
     );
 
+    /*
+
     console.groupCollapsed('[refreshData]');
     console.log('participants:', list.map((p,i)=> `${i+1}:${p.name||''}`));
     console.log('highlightIndex:', appState.highlightIndex, 'label:', appState.highlightIndex>=0 ? appState.highlightIndex+1 : 'n/a');
     console.groupEnd();
+
+    */
 
     createWheel();
     updateParticipantsDisplay();
