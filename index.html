@@ -466,13 +466,10 @@ function createWheel() {
     stops.push(`${color} ${start}deg ${end}deg`);
 
     const person = appState.participants[i];
-    const label = $(`
-      <div class="wedge-label" data-index="${i}" style="--rotate:${midAngle}deg;">
-        <div class="wl-num">#${i + 1}</div>
-        <div class="wl-name">${person?.name || person || ''}</div>
-      </div>
-    `);
-    wheel.append(label);
+    const label = $(
+  `<div class="wedge-label" style="--rotate:${midAngle}deg;">${i + 1}</div>`
+);
+wheel.append(label);
   }
 
   // align pie to 12 o’clock pointer
