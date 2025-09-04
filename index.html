@@ -400,7 +400,7 @@ const CAL = {
         });
         const list = records.map(r=>({
           id:r.id,
-          name:r.fields.Name || 'Anonymous',
+          name:r.fields.Name || '',
           email:r.fields.Email || '',
           weight:r.fields.Weight || 1,
           status:r.fields.Status || 'Active'
