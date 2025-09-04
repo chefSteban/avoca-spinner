@@ -37,6 +37,9 @@
       flex-direction: column;
       align-items: center;
     }
+    .wedge-label { width:auto; height:auto; padding:4px 6px; border-radius:8px; }
+.wedge-label .wl-num  { font-weight:900; font-size:1.05em; line-height:1; }
+.wedge-label .wl-name { font-weight:600; font-size:.78em; line-height:1.05; opacity:.95; margin-top:2px; white-space:nowrap; }
 
     /* Header image that always equals the wheel size */
     .header { width: 100%; max-width: 1200px; margin: 0 auto 12px; display:flex; align-items:flex-start; }
@@ -408,15 +411,37 @@ window.LABEL_NUDGE_FRAC = -0.08;  // fraction of slice width (negative = CCW)
 window.LABEL_NUDGE_DEG0 = 0;     // constant offset in degrees (negative = CCW)
 window.LABEL_NUDGE_FRAC = -0.08; // fraction of slice width (negative = CCW)
 
+
+(() => {
+  const labels = document.querySelectorAll('#wheel .wedge-label');
+  const list = (window.appState?.participants || []).slice(0, labels.length);
+  labels.forEach((el, i) => {
+    const p = list[i];
+    el.innerHTML = `<div class="wl-num" style="font-size:1.1em;font-weight:900;line-height:1">#${i+1}</div>
+                    <div class="wl-name" style="font-size:.78em;opacity:.95;line-height:1.05;margin-top:2px">${p?.name || p || ''}</div>`;
+    el.style.display = 'flex';
+    el.style.flexDirection = 'column';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+    el.style.width = 'auto';
+    el.style.height = 'auto';
+  });
+})();
+
+
+// tweakable label-centering knobs (define once)
+window.LABEL_NUDGE_DEG0 = 0;      // constant degrees (neg = CCW)
+window.LABEL_NUDGE_FRAC = -0.08;  // fraction of slice width (neg = CCW)
+
 function createWheel() {
   const wheel = $('#wheel');
   wheel.empty();
 
-  const n = appState.participants.length;         // same n as grid
+  const n = appState.participants.length;
   if (!n) return;
 
   const seg = 360 / n;
-  const startOffset = -seg / 2;                   // center each slice around its index
+  const startOffset = -seg / 2;
   const nudge = (window.LABEL_NUDGE_DEG0 || 0) + (window.LABEL_NUDGE_FRAC || 0) * seg;
 
   const stops = [];
@@ -426,24 +451,27 @@ function createWheel() {
     const start = startOffset + i * seg;
     const end   = startOffset + (i + 1) * seg;
 
-    // label angle: base to 12 o’clock (-90) + center of slice + adaptive nudge
+    // label at 12 o’clock reference + adaptive nudge
     const midAngle = -90 + (startOffset + i * seg + seg / 2) + nudge;
 
-    // alternating colors + optional highlight
-    const baseColor    = (i % 2 === 0) ? '#d83a32' : '#2b2f36';
-    const isHighlighted = (i === appState.highlightIndex);
-    const color = isHighlighted ? '#1976ff' : baseColor;
+    const baseColor     = (i % 2 === 0) ? '#d83a32' : '#2b2f36';
+    // const isHighlighted = (i === appState.highlightIndex);
+    // const color         = isHighlighted ? '#1976ff' : baseColor;
+    const color = baseColor; // no highlighted slice
 
     stops.push(`${color} ${start}deg ${end}deg`);
 
-    // label (number matches grid: i+1)
-    const label = $(
-      `<div class="wedge-label" style="--rotate:${midAngle}deg;">${i + 1}</div>`
-    );
+    const person = appState.participants[i];
+    const label = $(`
+      <div class="wedge-label" data-index="${i}" style="--rotate:${midAngle}deg;">
+        <div class="wl-num">#${i + 1}</div>
+        <div class="wl-name">${person?.name || person || ''}</div>
+      </div>
+    `);
     wheel.append(label);
   }
 
-  // shift the entire pie so 0° is at 12 o’clock (matches pointer)
+  // align pie to 12 o’clock pointer
   wheel.css('background', `conic-gradient(from -90deg, ${stops.join(',')})`);
 }
 
@@ -523,14 +551,11 @@ async function checkSpinTrigger() {
       void wheel[0].offsetWidth;
       wheel.css('transition','transform 4s cubic-bezier(.25,.46,.45,.94)');
 
-      const winnerIndex = chooseWeightedIndex(appState.participants);
-      const n = appState.participants.length || 36;
-      const seg = 360 / n;
-      
-      // CRITICAL FIX: Calculate target to match the corrected wheel layout
-      // Since we offset the wheel by -seg/2, we need to account for this
-      const startOffset = -seg / 2;
-      const targetSliceMidAngle = startOffset + winnerIndex * seg + seg / 2;
+  const winnerIndex = chooseWeightedIndex(appState.participants);
+  const n = appState.participants.length;
+  const seg = 360 / n;
+  const startOffset = -seg / 2;
+  const targetSliceMidAngle = startOffset + winnerIndex * seg + seg / 2;
       
       // The pointer points at 0°, so we want the target slice's mid angle to be at 0°
       // We need to rotate the wheel so that targetSliceMidAngle aligns with 0°
@@ -618,6 +643,42 @@ async function refreshData(){
       setInterval(pollForUpdates, AIRTABLE_CONFIG.POLLING_INTERVAL);
     });
 
+    function debugMapping(){
+  (appState.participants||[]).forEach((p,i)=>{
+    console.log(`Slice ${i+1} → ${p?.name || p}`);
+  });
+}
+debugMapping();
+
+(() => {
+  const hi = appState.highlightIndex;
+  if (hi < 0) return console.log("No slice currently highlighted.");
+  const p = appState.participants[hi];
+  console.log(`[highlight] slice #${hi+1} → ${p?.name || p}`);
+})();
+
+(() => {
+  const wheel = document.getElementById('wheel');
+  const style = getComputedStyle(wheel);
+  const t = style.transform;
+  let angle = 0;
+  if (t && t !== 'none') {
+    const m = t.match(/matrix\(([-0-9., ]+)\)/);
+    if (m) {
+      const parts = m[1].split(',').map(Number);
+      const [a,b] = parts; // cosθ, sinθ
+      angle = Math.round((Math.atan2(b, a) * 180 / Math.PI));
+    }
+  }
+  const n = appState.participants.length;
+  const seg = 360 / n;
+  // we use 12 o’clock reference → pointerAngle = 90deg in CSS-land
+  const pointerAngle = 90;
+  const currentAngle = ((pointerAngle - angle) % 360 + 360) % 360;
+  const indexUnderPointer = Math.floor(((currentAngle + seg/2) % 360) / seg);
+  const p = appState.participants[indexUnderPointer];
+  console.log(`[pointer] angle=${angle}°, seg=${seg.toFixed(2)}°, slice #${indexUnderPointer+1} → ${p?.name || p}`);
+})();
   </script>
 
 
