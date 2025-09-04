@@ -328,6 +328,11 @@
     // ============================================
     // CONFIG
     // ============================================
+
+    // tweakable label-centering knobs
+
+
+
     const AIRTABLE_CONFIG = {
       API_KEY: 'patjFd8AqLFaguOEe.0926a467696986c2920b20907d6f7b8bc468592117c50e02d4303fbc29eb0ac1',
       BASE_ID: 'appQm84VJgrmPJZal',
@@ -335,6 +340,12 @@
       ADMIN_TABLE: 'Admin Controls',
       POLLING_INTERVAL: 500
     };
+
+    // ---- CALIBRATION (single source of truth) ----
+const CAL = {
+  pointerDeg: 90,  // pointer at 12 o’clock in conic-gradient coords
+  labelDeg: 0      // tiny nudge if labels look a hair off (e.g., 0.5 or -0.5)
+};
 
    
 
@@ -399,81 +410,56 @@
       }catch(e){ updateConnectionStatus('error'); return []; }
     }
 
+    function ensureSlotsStable(list) {
+  // assign a fixed 'slot' once; keep array sorted by that slot forever
+  const withSlots = list.map((p, i) => ({
+    ...p,
+    slot: Number.isInteger(p?.slot) ? p.slot : i
+  }));
+  withSlots.sort((a, b) => a.slot - b.slot);
+  // cap to 36 if you use a max
+  return withSlots.slice(0, 36);
+}
+
 // ============================================
 // FIXED WHEEL RENDERING
 // ============================================
 
- // Put these near the top of your script so you can tweak live in console
-window.LABEL_NUDGE_DEG0 = 0;      // constant offset (deg), usually 0
-window.LABEL_NUDGE_FRAC = -0.08;  // fraction of slice width (negative = CCW)
-
-// tweakable label-centering knobs (you can adjust live in Console)
-window.LABEL_NUDGE_DEG0 = 0;     // constant offset in degrees (negative = CCW)
-window.LABEL_NUDGE_FRAC = -0.08; // fraction of slice width (negative = CCW)
-
-
-(() => {
-  const labels = document.querySelectorAll('#wheel .wedge-label');
-  const list = (window.appState?.participants || []).slice(0, labels.length);
-  labels.forEach((el, i) => {
-    const p = list[i];
-    el.innerHTML = `<div class="wl-num" style="font-size:1.1em;font-weight:900;line-height:1">#${i+1}</div>
-                    <div class="wl-name" style="font-size:.78em;opacity:.95;line-height:1.05;margin-top:2px">${p?.name || p || ''}</div>`;
-    el.style.display = 'flex';
-    el.style.flexDirection = 'column';
-    el.style.alignItems = 'center';
-    el.style.justifyContent = 'center';
-    el.style.width = 'auto';
-    el.style.height = 'auto';
-  });
-})();
-
-
-// tweakable label-centering knobs (define once)
-window.LABEL_NUDGE_DEG0 = 0;      // constant degrees (neg = CCW)
-window.LABEL_NUDGE_FRAC = -0.08;  // fraction of slice width (neg = CCW)
 
 function createWheel() {
-  appState.highlightIndex = -1; // always disable spinner highlight
-  const wheel = $('#wheel');
-  wheel.empty();
+  const $wheel = $('#wheel');
+  $wheel.empty();
 
-  const n = appState.participants.length;
+  const list = appState.participants || [];
+  const n = list.length;
   if (!n) return;
 
-    
-
-
   const seg = 360 / n;
-  const startOffset = -seg / 2;
-  const nudge = (window.LABEL_NUDGE_DEG0 || 0) + (window.LABEL_NUDGE_FRAC || 0) * seg;
 
+  // Build conic slices in native conic coords (0° = 3 o’clock)
   const stops = [];
-
   for (let i = 0; i < n; i++) {
-    // slice geometry
-    const start = startOffset + i * seg;
-    const end   = startOffset + (i + 1) * seg;
+    const start = i * seg;
+    const end   = (i + 1) * seg;
 
-    // label at 12 o’clock reference + adaptive nudge
-    const midAngle = -90 + (startOffset + i * seg + seg / 2) + nudge;
-
-    const baseColor     = (i % 2 === 0) ? '#d83a32' : '#2b2f36';
-    // const isHighlighted = (i === appState.highlightIndex);
-    // const color         = isHighlighted ? '#1976ff' : baseColor;
-    const color = baseColor; // no highlighted slice
-
+    const baseColor = (i % 2 === 0) ? '#d83a32' : '#2b2f36';
+    const color = baseColor; // keep wheel un-highlighted; grid does highlight
     stops.push(`${color} ${start}deg ${end}deg`);
-
-    const person = appState.participants[i];
-    const label = $(
-  `<div class="wedge-label" style="--rotate:${midAngle}deg;">${i + 1}</div>`
-);
-wheel.append(label);
   }
+  $wheel.css('background', `conic-gradient(${stops.join(',')})`);
 
-  // align pie to 12 o’clock pointer
-  wheel.css('background', `conic-gradient(from -90deg, ${stops.join(',')})`);
+  // Labels: mid-angle of each slice (+ tiny CAL.labelDeg if you need)
+  for (let i = 0; i < n; i++) {
+    const midA = i * seg + seg / 2;
+    const p = list[i];
+    const num = (p.slot ?? i) + 1;
+    const $label = $(`
+  <div class="wedge-label" style="--rotate:${midA + CAL.labelDeg}deg;">
+    <span class="wl-num">${num}</span>
+  </div>
+`);
+    $wheel.append($label);
+  }
 }
 
       function updateParticipantsDisplay(){
@@ -513,12 +499,23 @@ wheel.append(label);
     // ============================================
     // FIXED SPIN LOGIC
     // ============================================
-    function chooseWeightedIndex(list){
-      const total = list.reduce((s,p)=> s + (Number(p.weight)||1), 0);
-      let r = Math.random()*total;
-      for(let i=0;i<list.length;i++){ r -= (Number(list[i].weight)||1); if(r<=0) return i; }
-      return list.length-1;
-    }
+function chooseWeightedIndex(list) {
+  const weights = list.map(p => {
+    const w = Number(p?.weight);
+    return Number.isFinite(w) && w > 0 ? w : 1;
+  });
+  let total = 0;
+  for (const w of weights) total += w;
+  if (!Number.isFinite(total) || total <= 0) {
+    return Math.floor(Math.random() * list.length);
+  }
+  let r = Math.random() * total;
+  for (let i = 0; i < weights.length; i++) {
+    r -= weights[i];
+    if (r < 0) return i;
+  }
+  return weights.length - 1;
+}
 
     let lastSpinIdSeen=null, spinLockUntil=0;
 
@@ -542,90 +539,164 @@ async function checkSpinTrigger() {
   }
 }
 
-    async function spinWheel(){
-      const now = Date.now(); 
-      if(appState.isSpinning || now<spinLockUntil || !appState.participants.length) return;
-      appState.isSpinning = true; 
-      spinLockUntil = now + 6000;
+async function spinWheel() {
+  if (appState.isSpinning) return;
 
-      const wheel = $('#wheel');
-      wheel.css('transition','none'); 
-      wheel.css('transform','rotate(0deg)'); 
-      void wheel[0].offsetWidth;
-      wheel.css('transition','transform 4s cubic-bezier(.25,.46,.45,.94)');
+  const $wheel = $('#wheel');
+  const list = appState.participants || [];
+  const n = list.length;
+  if (!n) return;
 
-  const winnerIndex = chooseWeightedIndex(appState.participants);
-  const n = appState.participants.length;
+  // Pick winner from the SAME array instance used for labels/grid
+  const winnerIndex = chooseWeightedIndex(list);
+  const winner = list[winnerIndex];
+
+  // Math: land the midpoint of the winning slice under the pointer at CAL.pointerDeg
   const seg = 360 / n;
-  const startOffset = -seg / 2;
-  const targetSliceMidAngle = startOffset + winnerIndex * seg + seg / 2;
-      
-      // The pointer points at 0°, so we want the target slice's mid angle to be at 0°
-      // We need to rotate the wheel so that targetSliceMidAngle aligns with 0°
-      const baseRotationNeeded = -targetSliceMidAngle;
-      
-      // Add multiple full rotations for the spinning effect
-      const fullRotations = 8 * 360;
-      const finalRotation = fullRotations + baseRotationNeeded;
+  const target = winnerIndex * seg + seg / 2;       // slice midpoint in conic coords
+  const baseTurns = 8 * 360;                         // cosmetic spins
+  const finalRotation = baseTurns + (CAL.pointerDeg - target);
 
-      console.groupCollapsed('[spinWheel] Rotation Debug');
-      console.log('n:', n, 'seg:', seg.toFixed(2));
-      console.log('winnerIndex:', winnerIndex, 'winner label:', winnerIndex+1);
-      console.log('startOffset:', startOffset.toFixed(2));
-      console.log('targetSliceMidAngle:', targetSliceMidAngle.toFixed(2));
-      console.log('baseRotationNeeded:', baseRotationNeeded.toFixed(2));
-      console.log('finalRotation:', finalRotation.toFixed(2));
-      console.log('final position (mod360):', ((finalRotation % 360 + 360) % 360).toFixed(2));
-      console.groupEnd();
+  appState.isSpinning = true;
+  $wheel.css('transition', 'transform 4s cubic-bezier(.17,.67,.19,1)');
+  // force reflow for re-animating
+  // eslint-disable-next-line no-unused-expressions
+  $wheel[0].offsetHeight;
+  $wheel.css('transform', `rotate(${finalRotation}deg)`);
 
-      wheel.css('transform', `rotate(${finalRotation}deg)`);
-
-      setTimeout(async ()=>{
-        appState.isSpinning=false;
-        const winner = appState.participants[winnerIndex];
-        try{ 
-          await updateAirtableRecord(AIRTABLE_CONFIG.PARTICIPANTS_TABLE, winner.id, { Status:'Winner' }); 
-        }catch(e){}
-        
-        // Winner modal
-        $('#winnerNumber').text(winnerIndex+1);
-        $('#winnerName').text(winner.name || 'Winner');
-        $('#winnerAnnouncement').addClass('show');
-        setTimeout(()=>$('#winnerAnnouncement').removeClass('show'), 8000);
-        setTimeout(refreshData, 1000);
-      }, 4000);
+  $wheel.one('transitionend', () => {
+    // Verify index under the pointer
+    const st = window.getComputedStyle($wheel[0]).transform;
+    let rotDeg = 0;
+    if (st && st !== 'none') {
+      const m = st.match(/matrix\(([^)]+)\)/);
+      if (m) {
+        const [a, b] = m[1].split(',').map(parseFloat);
+        rotDeg = Math.atan2(b, a) * (180 / Math.PI);
+      }
     }
+    rotDeg = ((rotDeg % 360) + 360) % 360;
+    const angleUnderPointer = ((CAL.pointerDeg - rotDeg) % 360 + 360) % 360;
+    const idxAtPointer = Math.floor(angleUnderPointer / seg);
+
+    console.groupCollapsed('[post-spin check]');
+    console.log({ n, seg, winnerIndex, idxAtPointer, target, pointerDeg: CAL.pointerDeg, rotDeg, angleUnderPointer });
+    console.groupEnd();
+
+    // Grid highlight + modal (match your DOM ids)
+    appState.highlightIndex = winnerIndex;
+    updateParticipantsDisplay();
+    createWheel();
+
+    const num = (winner.slot ?? winnerIndex) + 1;
+    $('#winnerNumber').text(num);
+    $('#winnerName').text(winner?.name || 'Winner');
+    $('#winnerAnnouncement').addClass('show');
+    setTimeout(() => $('#winnerAnnouncement').removeClass('show'), 6000);
+
+    appState.isSpinning = false;
+  });
+}
 
     // ============================================
     // REFRESH & POLLING
     // ============================================
-async function refreshData(){
-  try{
-    const all  = await fetchParticipants();
-    const list = all.slice(0, 36);
-    appState.participants = list;
-    appState.queue        = all.slice(36);
+// ---------- helpers used inside refreshData ----------
+function _norm(s){ return (s || "").toString().trim().toLowerCase(); }
+function _id(p){                     // stable identity across refreshes
+  const email = _norm(p.email);
+  const name  = _norm(p.name);
+  return email || name;              // prefer email; fall back to name
+}
+function _sig(arr){                  // quick equality signature
+  return (arr || []).map(p => `${_id(p)}::${Number(p.weight ?? 1)}`).join('|');
+}
+function normalizeRoster(raw){
+  const out = [];
+  const seen = new Set();
+  for (const r of (raw || [])){
+    const p = {
+      name:  (r.name  ?? r.Name  ?? '').toString().trim(),
+      email: (r.email ?? r.Email ?? '').toString().trim(),
+      weight: Number(r.weight ?? r.Weight ?? 1)
+    };
+    const key = _id(p);
+    if (!key || seen.has(key)) continue;  // drop empties/dupes
+    seen.add(key);
+    if (!isFinite(p.weight) || p.weight <= 0) p.weight = 1;
+    out.push(p);
+  }
+  return out;
+}
+function ensureSlotsStable(prevList, nextList){
+  // Keep people in the same slot they had before, append truly new people at the end.
+  const prevIndexById = new Map();
+  (prevList || []).forEach((p,i) => prevIndexById.set(_id(p), i));
 
-    const key = userKey;
-    appState.highlightIndex = list.findIndex(p =>
-      norm(p.name) === key || norm(p.email) === key
+  // Attach desired index if known
+  const withIdx = nextList.map(p => ({ p, idx: prevIndexById.get(_id(p)) }));
+  // Sort: known index first by old order, then unknowns by original order
+  withIdx.sort((a,b) => {
+    const ai = (a.idx ?? Number.POSITIVE_INFINITY);
+    const bi = (b.idx ?? Number.POSITIVE_INFINITY);
+    return ai - bi;
+  });
+  return withIdx.map(x => x.p);
+}
+// ---------- end helpers ----------
+
+/**
+ * Fetch participants, keep first `cap` on the wheel, queue the rest,
+ * highlight "you", and update UI without disturbing an in-progress spin.
+ */
+async function refreshData(cap = 36){
+  try{
+    if (typeof updateConnectionStatus === 'function') updateConnectionStatus('connecting');
+
+    // 1) Load + clean + dedupe
+    const allRaw = await fetchParticipants();                 // <-- your existing fetcher
+    const all    = normalizeRoster(Array.isArray(allRaw) ? allRaw : []);
+
+    // 2) Wheel list + queue
+    const list = all.slice(0, cap);
+    appState.queue = all.slice(cap);
+
+    // 3) Keep slot order stable relative to what's currently on screen
+    const prev = appState.participants || [];
+    const stable = ensureSlotsStable(prev, list);
+
+    // 4) Only replace roster if it actually changed (prevents flicker)
+    const changed = _sig(prev) !== _sig(stable);
+    if (changed) appState.participants = stable;
+
+    // 5) Highlight “you” in the grid (by email first, then name)
+    const key = _norm(window.userKey || '');  // you already set userKey elsewhere
+    appState.highlightIndex = stable.findIndex(p =>
+      _norm(p.email) === key || _norm(p.name) === key
     );
 
-    /*
+    // 6) Update UI (skip during spin; defer until the spin finishes)
+    const doRender = () => {
+      if (typeof createWheel === 'function') createWheel();
+      if (typeof updateParticipantsDisplay === 'function') updateParticipantsDisplay();
+      if (typeof updateQueueDisplay === 'function') updateQueueDisplay();
+      if (typeof updateConnectionStatus === 'function') updateConnectionStatus('connected');
+    };
 
-    console.groupCollapsed('[refreshData]');
-    console.log('participants:', list.map((p,i)=> `${i+1}:${p.name||''}`));
-    console.log('highlightIndex:', appState.highlightIndex, 'label:', appState.highlightIndex>=0 ? appState.highlightIndex+1 : 'n/a');
-    console.groupEnd();
-
-    */
-
-    createWheel();
-    updateParticipantsDisplay();
-    updateQueueDisplay();
-    updateConnectionStatus('connected');
-  }catch(e){
-    updateConnectionStatus('error');
+    if (!appState.isSpinning){
+      doRender();
+    } else {
+      // Defer a single refresh until the current spin ends
+      const $wheel = $('#wheel');
+      // Avoid stacking multiple listeners across calls
+      $wheel.off('transitionend.refreshOnce').one('transitionend.refreshOnce', () => {
+        // Guard: if something re-started a spin, skip again
+        if (!appState.isSpinning) doRender();
+      });
+    }
+  } catch (err){
+    console.error('[refreshData] failed:', err);
+    if (typeof updateConnectionStatus === 'function') updateConnectionStatus('error');
   }
 }
 
