@@ -135,10 +135,10 @@
       top: 50%;
       left: 50%;
       transform:
-        rotate(var(--rotate))
-        translateX(var(--r))
-        rotate(calc(-1 * var(--rotate)))
-        translate(-50%, -50%);
+  rotate(calc(var(--rotate) + 180deg))
+  translateX(var(--r))
+  rotate(calc(-1 * (var(--rotate) + 180deg)))
+  translate(-50%, -50%);
       transform-origin: center;
 
       font-weight: 800;
