@@ -434,11 +434,15 @@ window.LABEL_NUDGE_DEG0 = 0;      // constant degrees (neg = CCW)
 window.LABEL_NUDGE_FRAC = -0.08;  // fraction of slice width (neg = CCW)
 
 function createWheel() {
+  appState.highlightIndex = -1; // always disable spinner highlight
   const wheel = $('#wheel');
   wheel.empty();
 
   const n = appState.participants.length;
   if (!n) return;
+
+    
+
 
   const seg = 360 / n;
   const startOffset = -seg / 2;
@@ -506,6 +510,8 @@ function createWheel() {
       }
       $count.text(appState.queue.length);
     }
+
+    
 
     // ============================================
     // FIXED SPIN LOGIC
